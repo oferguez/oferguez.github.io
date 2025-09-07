@@ -12,6 +12,8 @@ const sources = {
   verbs: "verbs_no_fatverb.txt"
 };
 
+const BATCH_SIZE = 10000; // Process wordlists in batches to avoid stack overflow
+
 const HEBREW_BLOCK = /[\u0590-\u05FF]/;
 const HEBREW_LETTERS_CLASS = "[\\u0590-\\u05FF]";
 
@@ -55,12 +57,102 @@ async function loadWordlist(sourceKey, customUrl, pasted, opts) {
   let words = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   words = words.filter(w => !/\s/.test(w) && HEBREW_BLOCK.test(w));
 
-  if (opts.stripNiqqud) words = words.map(stripNiqqud);
-  if (opts.unique) {
-    const seen = new Set();
-    words = words.filter(w => (seen.has(w) ? false : (seen.add(w), true)));
+  if (opts.stripNiqqud) {
+    // Process niqqud removal in batches to avoid stack overflow
+    const processedWords = [];
+    for (let i = 0; i < words.length; i += BATCH_SIZE) {
+      const batch = words.slice(i, i + BATCH_SIZE);
+      processedWords.push(...batch.map(stripNiqqud));
+    }
+    words = processedWords;
   }
   return words;
+}
+
+async function searchInWordlist(words, pattern, wholeWord, onProgress) {
+  const rx = templateToRegex(pattern, wholeWord);
+  const matches = [];
+  
+  if (words.length <= BATCH_SIZE) {
+    // Small wordlist - process all at once
+    return words.filter(w => rx.test(w));
+  }
+  
+  // Large wordlist - process in batches
+  const totalBatches = Math.ceil(words.length / BATCH_SIZE);
+  for (let i = 0; i < words.length; i += BATCH_SIZE) {
+    const batch = words.slice(i, i + BATCH_SIZE);
+    const batchMatches = batch.filter(w => rx.test(w));
+    matches.push(...batchMatches);
+    
+    if (onProgress) {
+      const currentBatch = Math.floor(i / BATCH_SIZE) + 1;
+      onProgress(currentBatch, totalBatches);
+    }
+    
+    // Allow UI to update between batches
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+  
+  return matches;
+}
+
+async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts, onSourceStatus, onProgress) {
+  const allMatches = [];
+  const allWordCounts = { total: 0, matched: 0 };
+  
+  // Process each source individually
+  for (const sourceKey of sourceKeys) {
+    try {
+      if (onProgress) onProgress(`טוען ${sourceKey}...`);
+      
+      const words = await loadWordlist(sourceKey, null, null, opts);
+      allWordCounts.total += words.length;
+      
+      if (onProgress) onProgress(`מחפש ב-${sourceKey}...`);
+      
+      const matches = await searchInWordlist(words, pattern, opts.wholeWord, 
+        (currentBatch, totalBatches) => {
+          if (onProgress) onProgress(`מחפש ב-${sourceKey} (חלק ${currentBatch}/${totalBatches})...`);
+        }
+      );
+      
+      allMatches.push(...matches);
+      allWordCounts.matched += matches.length;
+      
+      if (onSourceStatus) onSourceStatus(sourceKey, 'success', words.length);
+    } catch (e) {
+      console.warn(`Failed to load ${sourceKey}:`, e);
+      if (onSourceStatus) onSourceStatus(sourceKey, 'error', 0, e.message);
+    }
+  }
+  
+  // Process custom wordlists
+  for (const customList of customWordlists) {
+    if (onProgress) onProgress(`מחפש ב-${customList.name}...`);
+    
+    const matches = await searchInWordlist(customList.words, pattern, opts.wholeWord);
+    allMatches.push(...matches);
+    allWordCounts.total += customList.words.length;
+    allWordCounts.matched += matches.length;
+  }
+  
+  // Remove duplicates if requested
+  let finalMatches = allMatches;
+  if (opts.unique) {
+    if (onProgress) onProgress("מסיר כפילויות...");
+    const seen = new Set();
+    finalMatches = [];
+    for (const word of allMatches) {
+      if (!seen.has(word)) {
+        seen.add(word);
+        finalMatches.push(word);
+      }
+    }
+    allWordCounts.matched = finalMatches.length;
+  }
+  
+  return { matches: finalMatches, stats: allWordCounts };
 }
 
 function downloadTxt(lines, filename = "matches.txt") {
@@ -77,9 +169,11 @@ function downloadTxt(lines, filename = "matches.txt") {
 
 export const HebrewMatcher = ({ className }) => {
   const [pattern, setPattern] = useState("ר?וא?");
-  const [source, setSource] = useState("adjectives");
+  const [selectedSources, setSelectedSources] = useState(["adjectives"]);
   const [customUrl, setCustomUrl] = useState("");
   const [paste, setPaste] = useState("");
+  const [customWordlists, setCustomWordlists] = useState([]);
+  const [sourceStatus, setSourceStatus] = useState({});
   const [stripNiqqudFlag, setStripNiqqudFlag] = useState(true);
   const [unique, setUnique] = useState(true);
   const [sort, setSort] = useState(true);
@@ -94,17 +188,58 @@ export const HebrewMatcher = ({ className }) => {
       return;
     }
 
-    setStatus("טוען/ת ומחפש/ת...");
+    if (selectedSources.length === 0 && customWordlists.length === 0 && !paste.trim()) {
+      alert("נא לבחור לפחות מקור אחד");
+      return;
+    }
+
+    setStatus("מתחיל חיפוש...");
+    
+    // Reset source status
+    setSourceStatus({});
+    
     try {
       const t0 = performance.now();
-      const words = await loadWordlist(source, customUrl, paste, { stripNiqqud: stripNiqqudFlag, unique });
-      const rx = templateToRegex(pattern, wholeWord);
-      let results = words.filter(w => rx.test(w));
-      if (sort) results.sort((a, b) => a.localeCompare(b));
+      
+      // Create a custom wordlist from pasted text if provided
+      const customFromPaste = paste.trim() ? [{ name: 'pasted', words: paste.trim().split(/\r?\n/).map(s => s.trim()).filter(Boolean).filter(w => !/\s/.test(w) && HEBREW_BLOCK.test(w)) }] : [];
+      
+      const handleSourceStatus = (sourceKey, status, count, error) => {
+        setSourceStatus(prev => ({
+          ...prev,
+          [sourceKey]: { status, count, error }
+        }));
+      };
+      
+      const handleProgress = (message) => {
+        setStatus(message);
+      };
+      
+      const searchOpts = {
+        stripNiqqud: stripNiqqudFlag,
+        unique: unique,
+        wholeWord: wholeWord
+      };
+      
+      const { matches: results, stats: searchStats } = await loadAndSearchWordlists(
+        selectedSources, 
+        [...customWordlists, ...customFromPaste], 
+        pattern,
+        searchOpts, 
+        handleSourceStatus,
+        handleProgress
+      );
+      
+      let finalResults = results;
+      if (sort) {
+        setStatus("מיין תוצאות...");
+        finalResults.sort((a, b) => a.localeCompare(b));
+      }
+      
       const t1 = performance.now();
 
-      setMatches(results);
-      setStats({ total: words.length, matched: results.length, time: t1 - t0 });
+      setMatches(finalResults);
+      setStats({ total: searchStats.total, matched: searchStats.matched, time: t1 - t0 });
       setStatus("בוצע.");
     } catch (e) {
       console.error(e);
@@ -118,6 +253,44 @@ export const HebrewMatcher = ({ className }) => {
       return;
     }
     downloadTxt(matches, "matches.txt");
+  };
+
+  const handleDownloadFromUrl = async () => {
+    if (!customUrl.trim()) {
+      alert("נא להזין כתובת URL");
+      return;
+    }
+
+    setStatus("מוריד רשימת מילים מ-URL...");
+    try {
+      const res = await fetch(customUrl.trim(), { cache: "no-store" });
+      if (!res.ok) throw new Error("טעינת URL נכשלה: " + res.status);
+      const text = await res.text();
+      
+      let words = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      words = words.filter(w => !/\s/.test(w) && HEBREW_BLOCK.test(w));
+      
+      if (words.length === 0) {
+        alert("לא נמצאו מילים עבריות תקינות ב-URL");
+        setStatus("");
+        return;
+      }
+
+      // Create a name for the wordlist based on URL
+      const urlName = customUrl.split('/').pop() || 'custom_wordlist';
+      const newWordlist = {
+        name: urlName,
+        words: words,
+        url: customUrl
+      };
+
+      setCustomWordlists([...customWordlists, newWordlist]);
+      setCustomUrl(""); // Clear the input
+      setStatus(`הורד בהצלחה: ${words.length} מילים מ-${urlName}`);
+    } catch (e) {
+      console.error(e);
+      setStatus("שגיאה בהורדה: " + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   return (
@@ -142,13 +315,82 @@ export const HebrewMatcher = ({ className }) => {
               />
             </div>
             <div>
-              <label htmlFor="source">מקור מילים</label>
-              <select id="source" value={source} onChange={(e) => setSource(e.target.value)}>
-                <option value="adjectives">eyaler: adjectives.txt</option>
-                <option value="nouns">eyaler: nouns.txt</option>
-                <option value="verbs">eyaler: verbs_no_fatverb.txt</option>
-                <option value="custom">מותאם אישית (URL או הדבקה ידנית)</option>
-              </select>
+              <label>מקורות מילים (בחר/י אחד או יותר)</label>
+              <div className="source-checkboxes" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedSources.includes('adjectives')}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedSources([...selectedSources, 'adjectives']);
+                      } else {
+                        setSelectedSources(selectedSources.filter(s => s !== 'adjectives'));
+                      }
+                    }}
+                  />
+                  <span>eyaler: adjectives.txt</span>
+                  {sourceStatus.adjectives?.status === 'error' && (
+                    <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️ לא זמין</span>
+                  )}
+                  {sourceStatus.adjectives?.status === 'success' && (
+                    <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.adjectives.count.toLocaleString()}</span>
+                  )}
+                </label>
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedSources.includes('nouns')}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedSources([...selectedSources, 'nouns']);
+                      } else {
+                        setSelectedSources(selectedSources.filter(s => s !== 'nouns'));
+                      }
+                    }}
+                  />
+                  <span>eyaler: nouns.txt</span>
+                  {sourceStatus.nouns?.status === 'error' && (
+                    <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️ לא זמין</span>
+                  )}
+                  {sourceStatus.nouns?.status === 'success' && (
+                    <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.nouns.count.toLocaleString()}</span>
+                  )}
+                </label>
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedSources.includes('verbs')}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedSources([...selectedSources, 'verbs']);
+                      } else {
+                        setSelectedSources(selectedSources.filter(s => s !== 'verbs'));
+                      }
+                    }}
+                  />
+                  <span>eyaler: verbs_no_fatverb.txt</span>
+                  {sourceStatus.verbs?.status === 'error' && (
+                    <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️ לא זמין</span>
+                  )}
+                  {sourceStatus.verbs?.status === 'success' && (
+                    <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.verbs.count.toLocaleString()}</span>
+                  )}
+                </label>
+                {customWordlists.map((customList, index) => (
+                  <label key={index} className="checkbox-label">
+                    <input type="checkbox" checked={true} readOnly />
+                    <span>מורד: {customList.name}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => setCustomWordlists(customWordlists.filter((_, i) => i !== index))}
+                      style={{ marginRight: '8px', fontSize: '12px', padding: '2px 6px' }}
+                    >
+                      הסר
+                    </button>
+                  </label>
+                ))}
+              </div>
             </div>
             <div style={{ alignSelf: 'end' }}>
               <button onClick={handleSearch} className="btn primary">חיפוש</button>
@@ -157,13 +399,21 @@ export const HebrewMatcher = ({ className }) => {
 
           <div className="row row-2" style={{ marginTop: '12px' }}>
             <div>
-              <label htmlFor="customUrl">כתובת URL לקובץ מילים (אופציונלי)</label>
+              <label htmlFor="customUrl">הורד רשימת מילים מ-URL</label>
               <input 
                 id="customUrl" 
                 placeholder="https://raw.githubusercontent.com/.../words.txt"
                 value={customUrl}
                 onChange={(e) => setCustomUrl(e.target.value)}
               />
+              <button 
+                type="button" 
+                onClick={handleDownloadFromUrl} 
+                disabled={!customUrl.trim()}
+                style={{ marginTop: '4px', fontSize: '14px' }}
+              >
+                הורד ושמור מקומי
+              </button>
               <div className="small">הקובץ צריך להיות TXT, מילה אחת בכל שורה. שים/י לב ל-CORS.</div>
             </div>
             <div>
