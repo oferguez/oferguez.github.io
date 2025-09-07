@@ -9,7 +9,8 @@ import React, { useState } from 'react';
 const sources = {
   adjectives: "adjectives.txt",
   nouns: "nouns.txt",
-  verbs: "verbs_no_fatverb.txt"
+  verbs: "verbs_no_fatverb.txt",
+  he_IL: "he_IL.dic"
 };
 
 const BATCH_SIZE = 10000; // Process wordlists in batches to avoid stack overflow
@@ -375,6 +376,26 @@ export const HebrewMatcher = ({ className }) => {
                   )}
                   {sourceStatus.verbs?.status === 'success' && (
                     <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.verbs.count.toLocaleString()}</span>
+                  )}
+                </label>
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedSources.includes('he_IL')}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedSources([...selectedSources, 'he_IL']);
+                      } else {
+                        setSelectedSources(selectedSources.filter(s => s !== 'he_IL'));
+                      }
+                    }}
+                  />
+                  <span>he_IL</span>
+                  {sourceStatus.he_IL?.status === 'error' && (
+                    <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️ לא זמין</span>
+                  )}
+                  {sourceStatus.he_IL?.status === 'success' && (
+                    <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.he_IL.count.toLocaleString()}</span>
                   )}
                 </label>
                 {customWordlists.map((customList, index) => (
