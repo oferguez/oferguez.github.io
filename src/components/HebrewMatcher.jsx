@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 
+// const sources = {
+//   adjectives: "https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/adjectives.txt",
+//   nouns: "https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/nouns.txt",
+//   verbs: "https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/verbs_no_fatverb.txt"
+// };
+
 const sources = {
-  adjectives: "https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/adjectives.txt",
-  nouns: "https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/nouns.txt",
-  verbs: "https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/verbs_no_fatverb.txt"
+  adjectives: "adjectives.txt",
+  nouns: "nouns.txt",
+  verbs: "verbs_no_fatverb.txt"
 };
 
 const HEBREW_BLOCK = /[\u0590-\u05FF]/;
