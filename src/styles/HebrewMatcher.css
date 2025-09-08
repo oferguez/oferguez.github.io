@@ -170,3 +170,299 @@ a {
 .checkbox-label span {
   flex-grow: 1;
 }
+
+/* Dominant Search Button */
+.search-button-container {
+  margin: 24px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.search-btn-dominant {
+  font-size: 1.4rem !important;
+  padding: 16px 32px !important;
+  border-radius: 16px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  min-width: 200px;
+  box-shadow: 0 8px 32px rgba(20, 184, 166, 0.3) !important;
+  background: linear-gradient(135deg, #14b8a6, #06b6d4, #3b82f6) !important;
+  border: none !important;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease !important;
+}
+
+.search-btn-dominant:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(20, 184, 166, 0.4) !important;
+  background: linear-gradient(135deg, #0d9488, #0891b2, #2563eb) !important;
+}
+
+.search-btn-dominant:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 24px rgba(20, 184, 166, 0.3) !important;
+}
+
+.search-btn-dominant::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.search-btn-dominant:hover::before {
+  left: 100%;
+}
+
+@media (max-width: 640px) {
+  .search-btn-dominant {
+    font-size: 1.2rem !important;
+    padding: 14px 24px !important;
+    min-width: 160px;
+  }
+}
+
+/* Letter Constraints Display on Main Dialog */
+.letter-constraints-display {
+  background: #0b1220;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
+.letter-constraints-display > div {
+  margin: 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.constraint-label {
+  color: var(--muted);
+  font-weight: 600;
+  min-width: 100px;
+}
+
+.selected-letters-display {
+  color: #10b981;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.deselected-letters-display {
+  color: #ef4444;
+  font-weight: 600;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Letter Selector Dialog */
+.letter-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.letter-dialog {
+  background: var(--card);
+  border: 1px solid #1f2937;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  min-width: 600px;
+}
+
+.letter-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.letter-dialog-header h3 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.letter-dialog-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  width: auto;
+}
+
+.letter-dialog-close:hover {
+  background: #1f2937;
+  color: var(--fg);
+}
+
+.letter-instructions {
+  background: #0b1220;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  color: var(--muted);
+}
+
+.letter-instructions p {
+  margin: 4px 0;
+}
+
+.letter-instructions strong {
+  color: var(--fg);
+}
+
+/* Hebrew Keyboard Layout */
+.hebrew-keyboard {
+  margin: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.keyboard-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.keyboard-key {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.keyboard-key.disabled {
+  background: #1f2937;
+  color: var(--muted);
+  cursor: default;
+  opacity: 0.5;
+}
+
+.keyboard-key.neutral {
+  background: #374151;
+  color: var(--fg);
+  border-color: #4b5563;
+}
+
+.keyboard-key.neutral:hover {
+  background: #4b5563;
+  border-color: #6b7280;
+}
+
+.keyboard-key.selected {
+  background: #059669;
+  color: white;
+  border-color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+.keyboard-key.selected:hover {
+  background: #047857;
+  border-color: #059669;
+}
+
+.keyboard-key.deselected {
+  background: #dc2626;
+  color: white;
+  border-color: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+}
+
+.keyboard-key.deselected:hover {
+  background: #b91c1c;
+  border-color: #dc2626;
+}
+
+.letter-summary {
+  background: #0b1220;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 20px 0;
+  min-height: 60px;
+}
+
+.letter-summary > div {
+  margin: 8px 0;
+}
+
+.selected-letters {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.deselected-letters {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.letter-dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.letter-dialog-actions .btn {
+  width: auto;
+  padding: 10px 20px;
+}
+
+@media (max-width: 720px) {
+  .letter-dialog {
+    min-width: 0;
+    width: 95vw;
+    margin: 20px;
+  }
+  
+  .keyboard-key {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+  }
+  
+  .keyboard-row {
+    gap: 3px;
+  }
+}
