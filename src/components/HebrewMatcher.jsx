@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
 
-// const sources = {
-//   adjectives: "https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/adjectives.txt",
-//   nouns: "https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/nouns.txt",
-//   verbs: "https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/verbs_no_fatverb.txt"
-// };
-
 const sources = {
   adjectives: "adjectives.txt",
   nouns: "nouns.txt",
@@ -169,8 +163,8 @@ function downloadTxt(lines, filename = "matches.txt") {
 }
 
 export const HebrewMatcher = ({ className }) => {
-  const [pattern, setPattern] = useState("ר?וא?");
-  const [selectedSources, setSelectedSources] = useState(["adjectives"]);
+  const [pattern, setPattern] = useState("אהב?");
+  const [selectedSources, setSelectedSources] = useState(["adjectives", "nouns", "verbs", "he_IL"]);
   const [customUrl, setCustomUrl] = useState("");
   const [paste, setPaste] = useState("");
   const [customWordlists, setCustomWordlists] = useState([]);
