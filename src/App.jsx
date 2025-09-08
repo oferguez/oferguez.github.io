@@ -7,7 +7,7 @@ import './styles/HebrewMatcher.css';
 
 function App() {
   return (
-    <Router>
+    <Router basename="/landing">
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/hebrew-matcher" element={<HebrewMatcher />} />

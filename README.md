@@ -62,3 +62,9 @@ src/
 ## License
 
 This project is private and intended for personal use.
+
+## Words List downloaded from:
+### adjectives: https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/adjectives.txt
+### nouns: https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/nouns.txt
+### verbs: https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/verbs_no_fatverb.txt
+### he_IL: https://spellcheck-dictionaries.github.io/he_IL/he_IL.dic
