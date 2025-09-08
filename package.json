@@ -1,9 +1,12 @@
-{
+ {
   "name": "web-apps-landing",
   "version": "1.0.0",
   "description": "A landing page for web applications and tools",
   "private": true,
+  "homepage": "https://oferguez.github.io/landing",
   "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",    
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -12,7 +15,8 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.1"
+    "react-router-dom": "^6.20.1",
+    "gh-pages": "^5.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.1.1",
