@@ -64,20 +64,44 @@ async function loadWordlist(sourceKey, customUrl, pasted, opts) {
   return words;
 }
 
-async function searchInWordlist(words, pattern, wholeWord, onProgress) {
+async function searchInWordlist(words, pattern, wholeWord, onProgress, letterConstraints = null) {
   const rx = templateToRegex(pattern, wholeWord);
   const matches = [];
   
+  
+  // Helper function to check letter constraints
+  const passesLetterConstraints = (word) => {
+    if (!letterConstraints) return true;
+    
+    const { selected, deselected } = letterConstraints;
+    
+    // Check that all selected letters appear in the word
+    for (const letter of selected) {
+      if (!word.includes(letter)) {
+        return false;
+      }
+    }
+    
+    // Check that none of the deselected letters appear in the word
+    for (const letter of deselected) {
+      if (word.includes(letter)) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+  
   if (words.length <= BATCH_SIZE) {
     // Small wordlist - process all at once
-    return words.filter(w => rx.test(w));
+    return words.filter(w => rx.test(w) && passesLetterConstraints(w));
   }
   
   // Large wordlist - process in batches
   const totalBatches = Math.ceil(words.length / BATCH_SIZE);
   for (let i = 0; i < words.length; i += BATCH_SIZE) {
     const batch = words.slice(i, i + BATCH_SIZE);
-    const batchMatches = batch.filter(w => rx.test(w));
+    const batchMatches = batch.filter(w => rx.test(w) && passesLetterConstraints(w));
     matches.push(...batchMatches);
     
     if (onProgress) {
@@ -92,7 +116,7 @@ async function searchInWordlist(words, pattern, wholeWord, onProgress) {
   return matches;
 }
 
-async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts, onSourceStatus, onProgress) {
+async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts, onSourceStatus, onProgress, letterConstraints = null) {
   const allMatches = [];
   const allWordCounts = { total: 0, matched: 0 };
   
@@ -109,7 +133,8 @@ async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts
       const matches = await searchInWordlist(words, pattern, opts.wholeWord, 
         (currentBatch, totalBatches) => {
           if (onProgress) onProgress(`מחפש ב-${sourceKey} (חלק ${currentBatch}/${totalBatches})...`);
-        }
+        },
+        letterConstraints
       );
       
       allMatches.push(...matches);
@@ -126,7 +151,7 @@ async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts
   for (const customList of customWordlists) {
     if (onProgress) onProgress(`מחפש ב-${customList.name}...`);
     
-    const matches = await searchInWordlist(customList.words, pattern, opts.wholeWord);
+    const matches = await searchInWordlist(customList.words, pattern, opts.wholeWord, null, letterConstraints);
     allMatches.push(...matches);
     allWordCounts.total += customList.words.length;
     allWordCounts.matched += matches.length;
@@ -162,6 +187,19 @@ function downloadTxt(lines, filename = "matches.txt") {
   URL.revokeObjectURL(url);
 }
 
+// Hebrew QWERTY keyboard layout
+const HEBREW_KEYBOARD = [
+  { row: 0, keys: ["'", "1-!", "2-@", "3-#", "4-$", "5-%", "6-^", "7-&", "8-*", "9-(", "0-)", "-", "="] },
+  { row: 1, keys: ["ק", "ר", "א", "ט", "ו", "ן", "ם", "פ", "]", "[", "\\"] },
+  { row: 2, keys: ["ש", "ד", "ג", "כ", "ע", "י", "ח", "ל", "ך", "ף", ",", "."] },
+  { row: 3, keys: ["ז", "ס", "ב", "ה", "נ", "מ", "צ", "ת", "ץ"] }
+];
+
+// Extract only Hebrew letters for selection
+const HEBREW_LETTERS = HEBREW_KEYBOARD.flatMap(row => 
+  row.keys.filter(key => /^[א-ת]$/.test(key))
+);
+
 export const HebrewMatcher = ({ className }) => {
   const [pattern, setPattern] = useState("אהב?");
   const [selectedSources, setSelectedSources] = useState(["adjectives", "nouns", "verbs", "he_IL"]);
@@ -176,6 +214,8 @@ export const HebrewMatcher = ({ className }) => {
   const [status, setStatus] = useState("");
   const [matches, setMatches] = useState([]);
   const [stats, setStats] = useState({ total: 0, matched: 0, time: 0 });
+  const [showLetterSelector, setShowLetterSelector] = useState(false);
+  const [letterStates, setLetterStates] = useState({}); // 'selected', 'deselected', or undefined (grey)
 
   const handleSearch = async () => {
     if (!pattern) {
@@ -216,13 +256,18 @@ export const HebrewMatcher = ({ className }) => {
         wholeWord: wholeWord
       };
       
+      // Prepare letter constraints
+      const { selected, deselected } = getSelectedDeselectedSummary();
+      const letterConstraints = (selected.length > 0 || deselected.length > 0) ? { selected, deselected } : null;
+      
       const { matches: results, stats: searchStats } = await loadAndSearchWordlists(
         selectedSources, 
         [...customWordlists, ...customFromPaste], 
         pattern,
         searchOpts, 
         handleSourceStatus,
-        handleProgress
+        handleProgress,
+        letterConstraints
       );
       
       let finalResults = results;
@@ -248,6 +293,40 @@ export const HebrewMatcher = ({ className }) => {
       return;
     }
     downloadTxt(matches, "matches.txt");
+  };
+
+  const handleLetterClick = (letter, isRightClick) => {
+    setLetterStates(prev => {
+      const current = prev[letter];
+      let newState;
+      
+      if (isRightClick) {
+        // Right click: grey -> red -> grey
+        newState = current === 'deselected' ? undefined : 'deselected';
+      } else {
+        // Left click: grey -> green -> grey  
+        newState = current === 'selected' ? undefined : 'selected';
+      }
+      
+      const newStates = { ...prev };
+      if (newState === undefined) {
+        delete newStates[letter];
+      } else {
+        newStates[letter] = newState;
+      }
+      return newStates;
+    });
+  };
+
+  const getSelectedDeselectedSummary = () => {
+    const selected = Object.entries(letterStates)
+      .filter(([, state]) => state === 'selected')
+      .map(([letter]) => letter);
+    const deselected = Object.entries(letterStates)
+      .filter(([, state]) => state === 'deselected')
+      .map(([letter]) => letter);
+    
+    return { selected, deselected };
   };
 
   const handleDownloadFromUrl = async () => {
@@ -299,7 +378,7 @@ export const HebrewMatcher = ({ className }) => {
             אפשר גם מחלקת תווים: <span className="kbd">[אי]</span>. עוגנים <span className="kbd">^</span> ו-<span className="kbd">$</span> ניתנים אוטומטית.
           </p>
 
-          <div className="row row-3">
+          <div className="row row-2">
             <div>
               <label htmlFor="pattern">תבנית לחיפוש</label>
               <input 
@@ -407,9 +486,6 @@ export const HebrewMatcher = ({ className }) => {
                 ))}
               </div>
             </div>
-            <div style={{ alignSelf: 'end' }}>
-              <button onClick={handleSearch} className="btn primary">חיפוש</button>
-            </div>
           </div>
 
           <div className="row row-2" style={{ marginTop: '12px' }}>
@@ -461,8 +537,137 @@ export const HebrewMatcher = ({ className }) => {
 
           <div style={{ marginTop: '14px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button onClick={handleDownload} className="btn">הורד תוצאות (TXT)</button>
+            <button onClick={() => setShowLetterSelector(true)} className="btn">בחירת אותיות</button>
             <span className="small">{status}</span>
           </div>
+          
+          {/* Letter Constraints Display */}
+          {(() => {
+            const { selected, deselected } = getSelectedDeselectedSummary();
+            if (selected.length > 0 || deselected.length > 0) {
+              return (
+                <div className="letter-constraints-display">
+                  {selected.length > 0 && (
+                    <>
+                      <span className="constraint-label">חייבות להופיע:</span> 
+                      <span className="selected-letters-display">{selected.join(', ')}</span>
+                      <span>     |     </span>
+                    </>
+                  )}
+                  {deselected.length > 0 && (
+                    <>
+                      <span className="constraint-label">לא יופיעו:</span> 
+                      <span className="deselected-letters-display">{deselected.join(', ')}</span>
+                    </>
+                  )}
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+          {/* Dominant Search Button */}
+          <div className="search-button-container">
+            <button onClick={handleSearch} className="btn primary search-btn-dominant">
+              🔍 חיפוש
+            </button>
+          </div>
+          
+          {/* Letter Selector Dialog */}
+          {showLetterSelector && (
+            <div className="letter-dialog-overlay" onClick={() => setShowLetterSelector(false)}>
+              <div className="letter-dialog" onClick={(e) => e.stopPropagation()}>
+                <div className="letter-dialog-header">
+                  <h3>בחירת אותיות</h3>
+                  <button 
+                    className="letter-dialog-close" 
+                    onClick={() => setShowLetterSelector(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+                
+                <div className="letter-instructions">
+                  <p><strong>לחיצה שמאלית:</strong> אות חייבת להופיע (ירוק)</p>
+                  <p><strong>לחיצה ימנית:</strong> אות לא מופיעה (אדום)</p>
+                  <p><strong>אפור:</strong> אין הגבלה על האות</p>
+                </div>
+                
+                <div className="hebrew-keyboard">
+                  {HEBREW_KEYBOARD.map((row, rowIndex) => (
+                    <div key={rowIndex} className="keyboard-row">
+                      {row.keys.map((key, keyIndex) => {
+                        const isHebrewLetter = /^[\u05d0-\u05ea]$/.test(key);
+                        if (!isHebrewLetter) {
+                          return (
+                            <div key={keyIndex} className="keyboard-key disabled">
+                              {key}
+                            </div>
+                          );
+                        }
+                        
+                        const state = letterStates[key];
+                        const className = `keyboard-key ${
+                          state === 'selected' ? 'selected' : 
+                          state === 'deselected' ? 'deselected' : 
+                          'neutral'
+                        }`;
+                        
+                        return (
+                          <div 
+                            key={keyIndex}
+                            className={className}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleLetterClick(key, false);
+                            }}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              handleLetterClick(key, true);
+                            }}
+                          >
+                            {key}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+                
+                {(() => {
+                  const { selected, deselected } = getSelectedDeselectedSummary();
+                  return (
+                    <div className="letter-summary">
+                      {selected.length > 0 && (
+                        <div>אותיות שחייבות להופיע: <span className="selected-letters">{selected.join(', ')}</span></div>
+                      )}
+                      {deselected.length > 0 && (
+                        <div>אותיות שלא יופיעו: <span className="deselected-letters">{deselected.join(', ')}</span></div>
+                      )}
+                      {selected.length === 0 && deselected.length === 0 && (
+                        <div className="muted">לא נבחרו הגבלות אותיות</div>
+                      )}
+                    </div>
+                  );
+                })()}
+                
+                <div className="letter-dialog-actions">
+                  <button 
+                    onClick={() => setLetterStates({})}
+                    className="btn"
+                  >
+                    נקה הכל
+                  </button>
+                  <button 
+                    onClick={() => setShowLetterSelector(false)}
+                    className="btn primary"
+                  >
+                    סגור
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="card" style={{ marginTop: '16px' }}>
