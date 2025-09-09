@@ -16,11 +16,21 @@ function stripNiqqud(s) {
   return Array.from(s.normalize("NFKD")).filter(ch => !/\p{M}/u.test(ch)).join("");
 }
 
+function normalizeFinalLetters(s) {
+  return s
+    .replace(/ך/g, 'כ')
+    .replace(/ן/g, 'נ')
+    .replace(/ם/g, 'מ')
+    .replace(/ף/g, 'פ')
+    .replace(/ץ/g, 'צ');
+}
+
 function templateToRegex(template, wholeWord = true) {
+  const normalizedTemplate = normalizeFinalLetters(template);
   let out = "";
   let inClass = false;
-  for (let i = 0; i < template.length; i++) {
-    const ch = template[i];
+  for (let i = 0; i < normalizedTemplate.length; i++) {
+    const ch = normalizedTemplate[i];
     if (ch === "[" && !inClass) { inClass = true; out += ch; continue; }
     if (ch === "]" && inClass) { inClass = false; out += ch; continue; }
     if (inClass) { out += ch; continue; }
@@ -74,17 +84,20 @@ async function searchInWordlist(words, pattern, wholeWord, onProgress, letterCon
     if (!letterConstraints) return true;
     
     const { selected, deselected } = letterConstraints;
+    const normalizedWord = normalizeFinalLetters(word);
+    const normalizedSelected = selected.map(normalizeFinalLetters);
+    const normalizedDeselected = deselected.map(normalizeFinalLetters);
     
     // Check that all selected letters appear in the word
-    for (const letter of selected) {
-      if (!word.includes(letter)) {
+    for (const letter of normalizedSelected) {
+      if (!normalizedWord.includes(letter)) {
         return false;
       }
     }
     
     // Check that none of the deselected letters appear in the word
-    for (const letter of deselected) {
-      if (word.includes(letter)) {
+    for (const letter of normalizedDeselected) {
+      if (normalizedWord.includes(letter)) {
         return false;
       }
     }
@@ -94,14 +107,14 @@ async function searchInWordlist(words, pattern, wholeWord, onProgress, letterCon
   
   if (words.length <= BATCH_SIZE) {
     // Small wordlist - process all at once
-    return words.filter(w => rx.test(w) && passesLetterConstraints(w));
+    return words.filter(w => rx.test(normalizeFinalLetters(w)) && passesLetterConstraints(w));
   }
   
   // Large wordlist - process in batches
   const totalBatches = Math.ceil(words.length / BATCH_SIZE);
   for (let i = 0; i < words.length; i += BATCH_SIZE) {
     const batch = words.slice(i, i + BATCH_SIZE);
-    const batchMatches = batch.filter(w => rx.test(w) && passesLetterConstraints(w));
+    const batchMatches = batch.filter(w => rx.test(normalizeFinalLetters(w)) && passesLetterConstraints(w));
     matches.push(...batchMatches);
     
     if (onProgress) {
@@ -195,10 +208,6 @@ const HEBREW_KEYBOARD = [
   { row: 3, keys: ["ז", "ס", "ב", "ה", "נ", "מ", "צ", "ת", "ץ"] }
 ];
 
-// Extract only Hebrew letters for selection
-const HEBREW_LETTERS = HEBREW_KEYBOARD.flatMap(row => 
-  row.keys.filter(key => /^[א-ת]$/.test(key))
-);
 
 export const HebrewMatcher = ({ className }) => {
   const [pattern, setPattern] = useState("אהב?");
@@ -378,12 +387,23 @@ export const HebrewMatcher = ({ className }) => {
 
           <div>
             <label htmlFor="pattern">תבנית לחיפוש</label>
-            <input 
-              id="pattern" 
-              placeholder="לדוגמה: ר?וא?" 
-              value={pattern}
-              onChange={(e) => setPattern(e.target.value)}
-            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input 
+                id="pattern" 
+                placeholder="לדוגמה: ר?וא?" 
+                value={pattern}
+                onChange={(e) => setPattern(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                  }
+                }}
+                style={{ width: '8ch', minWidth: '12ch' }}
+              />
+              <button onClick={handleSearch} className="btn primary search-btn-dominant">
+                🔍 חיפוש
+              </button>
+            </div>
           </div>
 
           <details className="custom-sources" open>
@@ -565,12 +585,6 @@ export const HebrewMatcher = ({ className }) => {
             return null;
           })()}
 
-          {/* Dominant Search Button */}
-          <div className="search-button-container">
-            <button onClick={handleSearch} className="btn primary search-btn-dominant">
-              🔍 חיפוש
-            </button>
-          </div>
           
           {/* Letter Selector Dialog */}
           {showLetterSelector && (
