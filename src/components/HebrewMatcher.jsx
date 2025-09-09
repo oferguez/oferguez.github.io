@@ -406,7 +406,7 @@ export const HebrewMatcher = ({ className }) => {
             </div>
           </div>
 
-          <details className="custom-sources" close>
+          <details className="custom-sources">
             <summary>בחירת מילונים</summary>
             <div className="sources-grid">
               <div className="default-sources">
