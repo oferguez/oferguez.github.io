@@ -371,174 +371,173 @@ export const HebrewMatcher = ({ className }) => {
     <div className={className} dir="rtl" lang="he">
       <div className="wrap">
         <div className="card">
-          <h1>חיפוש מילים לפי תבנית (עברית)</h1>
-          <p className="muted">
-            השתמש/י ב-<span className="kbd">?</span> לאות עברית אחת. כל שאר התווים נלקחים ככתיבתם.
-            לדוגמה: <span className="kbd">ר?וא?</span> → <span className="hint">ר</span> + אות כלשהי + <span className="hint">ו</span> + <span className="hint">א</span> + אות כלשהי.
-            אפשר גם מחלקת תווים: <span className="kbd">[אי]</span>. עוגנים <span className="kbd">^</span> ו-<span className="kbd">$</span> ניתנים אוטומטית.
+          <h1>חיפוש מילים לפי תבנית</h1>
+          <p className="muted compact">
+            השתמש/י ב-<span className="kbd">?</span> לאות כלשהי. דוגמה: <span className="kbd">ר?וא?</span>
           </p>
 
-          <div className="row row-2">
-            <div>
-              <label htmlFor="pattern">תבנית לחיפוש</label>
-              <input 
-                id="pattern" 
-                placeholder="לדוגמה: ר?וא?" 
-                value={pattern}
-                onChange={(e) => setPattern(e.target.value)}
-              />
-            </div>
-            <div>
-              <label>מקורות מילים (בחר/י אחד או יותר)</label>
-              <div className="source-checkboxes" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                <label className="checkbox-label">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedSources.includes('adjectives')}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedSources([...selectedSources, 'adjectives']);
-                      } else {
-                        setSelectedSources(selectedSources.filter(s => s !== 'adjectives'));
-                      }
-                    }}
-                  />
-                  <span>eyaler: adjectives.txt</span>
-                  {sourceStatus.adjectives?.status === 'error' && (
-                    <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️ לא זמין</span>
-                  )}
-                  {sourceStatus.adjectives?.status === 'success' && (
-                    <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.adjectives.count.toLocaleString()}</span>
-                  )}
-                </label>
-                <label className="checkbox-label">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedSources.includes('nouns')}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedSources([...selectedSources, 'nouns']);
-                      } else {
-                        setSelectedSources(selectedSources.filter(s => s !== 'nouns'));
-                      }
-                    }}
-                  />
-                  <span>eyaler: nouns.txt</span>
-                  {sourceStatus.nouns?.status === 'error' && (
-                    <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️ לא זמין</span>
-                  )}
-                  {sourceStatus.nouns?.status === 'success' && (
-                    <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.nouns.count.toLocaleString()}</span>
-                  )}
-                </label>
-                <label className="checkbox-label">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedSources.includes('verbs')}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedSources([...selectedSources, 'verbs']);
-                      } else {
-                        setSelectedSources(selectedSources.filter(s => s !== 'verbs'));
-                      }
-                    }}
-                  />
-                  <span>eyaler: verbs_no_fatverb.txt</span>
-                  {sourceStatus.verbs?.status === 'error' && (
-                    <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️ לא זמין</span>
-                  )}
-                  {sourceStatus.verbs?.status === 'success' && (
-                    <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.verbs.count.toLocaleString()}</span>
-                  )}
-                </label>
-                <label className="checkbox-label">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedSources.includes('he_IL')}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedSources([...selectedSources, 'he_IL']);
-                      } else {
-                        setSelectedSources(selectedSources.filter(s => s !== 'he_IL'));
-                      }
-                    }}
-                  />
-                  <span>he_IL</span>
-                  {sourceStatus.he_IL?.status === 'error' && (
-                    <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️ לא זמין</span>
-                  )}
-                  {sourceStatus.he_IL?.status === 'success' && (
-                    <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.he_IL.count.toLocaleString()}</span>
-                  )}
-                </label>
-                {customWordlists.map((customList, index) => (
-                  <label key={index} className="checkbox-label">
-                    <input type="checkbox" checked={true} readOnly />
-                    <span>מורד: {customList.name}</span>
-                    <button 
-                      type="button" 
-                      onClick={() => setCustomWordlists(customWordlists.filter((_, i) => i !== index))}
-                      style={{ marginRight: '8px', fontSize: '12px', padding: '2px 6px' }}
-                    >
-                      הסר
-                    </button>
+          <div>
+            <label htmlFor="pattern">תבנית לחיפוש</label>
+            <input 
+              id="pattern" 
+              placeholder="לדוגמה: ר?וא?" 
+              value={pattern}
+              onChange={(e) => setPattern(e.target.value)}
+            />
+          </div>
+
+          <details className="custom-sources" open>
+            <summary>מילונים</summary>
+            <div className="sources-grid">
+              <div className="default-sources">
+                <label>מקורות ברירת מחדל</label>
+                <div className="source-checkboxes">
+                  <label className="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedSources.includes('adjectives')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSources([...selectedSources, 'adjectives']);
+                        } else {
+                          setSelectedSources(selectedSources.filter(s => s !== 'adjectives'));
+                        }
+                      }}
+                    />
+                    <span>תארים</span>
+                    {sourceStatus.adjectives?.status === 'error' && (
+                      <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️</span>
+                    )}
+                    {sourceStatus.adjectives?.status === 'success' && (
+                      <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.adjectives.count.toLocaleString()}</span>
+                    )}
                   </label>
-                ))}
+                  <label className="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedSources.includes('nouns')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSources([...selectedSources, 'nouns']);
+                        } else {
+                          setSelectedSources(selectedSources.filter(s => s !== 'nouns'));
+                        }
+                      }}
+                    />
+                    <span>שמות עצם</span>
+                    {sourceStatus.nouns?.status === 'error' && (
+                      <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️</span>
+                    )}
+                    {sourceStatus.nouns?.status === 'success' && (
+                      <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.nouns.count.toLocaleString()}</span>
+                    )}
+                  </label>
+                  <label className="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedSources.includes('verbs')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSources([...selectedSources, 'verbs']);
+                        } else {
+                          setSelectedSources(selectedSources.filter(s => s !== 'verbs'));
+                        }
+                      }}
+                    />
+                    <span>פעלים</span>
+                    {sourceStatus.verbs?.status === 'error' && (
+                      <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️</span>
+                    )}
+                    {sourceStatus.verbs?.status === 'success' && (
+                      <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.verbs.count.toLocaleString()}</span>
+                    )}
+                  </label>
+                  <label className="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedSources.includes('he_IL')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSources([...selectedSources, 'he_IL']);
+                        } else {
+                          setSelectedSources(selectedSources.filter(s => s !== 'he_IL'));
+                        }
+                      }}
+                    />
+                    <span>מילון מערכת</span>
+                    {sourceStatus.he_IL?.status === 'error' && (
+                      <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️</span>
+                    )}
+                    {sourceStatus.he_IL?.status === 'success' && (
+                      <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.he_IL.count.toLocaleString()}</span>
+                    )}
+                  </label>
+                  {customWordlists.map((customList, index) => (
+                    <label key={index} className="checkbox-label">
+                      <input type="checkbox" checked={true} readOnly />
+                      <span>מורד: {customList.name}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setCustomWordlists(customWordlists.filter((_, i) => i !== index))}
+                        className="btn-remove"
+                      >
+                        הסר
+                      </button>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="custom-sources-inputs">
+                <div>
+                  <label htmlFor="customUrl">הורדה מ-URL</label>
+                  <input 
+                    id="customUrl" 
+                    placeholder="https://example.com/words.txt"
+                    value={customUrl}
+                    onChange={(e) => setCustomUrl(e.target.value)}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleDownloadFromUrl} 
+                    disabled={!customUrl.trim()}
+                    className="btn-small"
+                  >
+                    הורד
+                  </button>
+                </div>
+                <div>
+                  <label htmlFor="paste">הדבקה ידנית</label>
+                  <textarea 
+                    id="paste" 
+                    rows={3} 
+                    placeholder="מילה אחת בכל שורה"
+                    value={paste}
+                    onChange={(e) => setPaste(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          </details>
 
-          <div className="row row-2" style={{ marginTop: '12px' }}>
-            <div>
-              <label htmlFor="customUrl">הורד רשימת מילים מ-URL</label>
-              <input 
-                id="customUrl" 
-                placeholder="https://raw.githubusercontent.com/.../words.txt"
-                value={customUrl}
-                onChange={(e) => setCustomUrl(e.target.value)}
-              />
-              <button 
-                type="button" 
-                onClick={handleDownloadFromUrl} 
-                disabled={!customUrl.trim()}
-                style={{ marginTop: '4px', fontSize: '14px' }}
-              >
-                הורד ושמור מקומי
-              </button>
-              <div className="small">הקובץ צריך להיות TXT, מילה אחת בכל שורה. שים/י לב ל-CORS.</div>
-            </div>
-            <div>
-              <label htmlFor="paste">או הדבקה ידנית של רשימת מילים</label>
-              <textarea 
-                id="paste" 
-                rows={4} 
-                placeholder="מילה אחת בכל שורה"
-                value={paste}
-                onChange={(e) => setPaste(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="chips">
-            דגלים:
-            <label className="chip">
-              <input type="checkbox" checked={stripNiqqudFlag} onChange={(e) => setStripNiqqudFlag(e.target.checked)} /> הסר ניקוד
+          <div className="chips-compact">
+            <label className="chip-small">
+              <input type="checkbox" checked={stripNiqqudFlag} onChange={(e) => setStripNiqqudFlag(e.target.checked)} /> ללא ניקוד
             </label>
-            <label className="chip">
-              <input type="checkbox" checked={unique} onChange={(e) => setUnique(e.target.checked)} /> הסר כפילויות
+            <label className="chip-small">
+              <input type="checkbox" checked={unique} onChange={(e) => setUnique(e.target.checked)} /> ללא כפילויות
             </label>
-            <label className="chip">
-              <input type="checkbox" checked={sort} onChange={(e) => setSort(e.target.checked)} /> מיין תוצאות
+            <label className="chip-small">
+              <input type="checkbox" checked={sort} onChange={(e) => setSort(e.target.checked)} /> מיון
             </label>
-            <label className="chip">
-              <input type="checkbox" checked={wholeWord} onChange={(e) => setWholeWord(e.target.checked)} /> התאמה למילה שלמה
+            <label className="chip-small">
+              <input type="checkbox" checked={wholeWord} onChange={(e) => setWholeWord(e.target.checked)} /> מילה שלמה
             </label>
           </div>
 
-          <div style={{ marginTop: '14px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button onClick={handleDownload} className="btn">הורד תוצאות (TXT)</button>
-            <button onClick={() => setShowLetterSelector(true)} className="btn">בחירת אותיות</button>
-            <span className="small">{status}</span>
+          <div className="secondary-actions">
+            <button onClick={() => setShowLetterSelector(true)} className="btn-secondary">בחירת אותיות</button>
+            <button onClick={handleDownload} className="btn-secondary">הורד תוצאות</button>
+            {status && <span className="status-text">{status}</span>}
           </div>
           
           {/* Letter Constraints Display */}
