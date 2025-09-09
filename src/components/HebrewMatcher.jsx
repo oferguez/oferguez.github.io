@@ -585,7 +585,6 @@ export const HebrewMatcher = ({ className }) => {
             }
             return null;
           })()}
-
           
           {/* Letter Selector Dialog */}
           {showLetterSelector && (
