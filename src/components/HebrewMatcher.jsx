@@ -406,8 +406,8 @@ export const HebrewMatcher = ({ className }) => {
             </div>
           </div>
 
-          <details className="custom-sources" open>
-            <summary>מילונים</summary>
+          <details className="custom-sources" close>
+            <summary>בחירת מילונים</summary>
             <div className="sources-grid">
               <div className="default-sources">
                 <label>מקורות ברירת מחדל</label>
@@ -540,12 +540,13 @@ export const HebrewMatcher = ({ className }) => {
           </details>
 
           <div className="chips-compact">
-            <label className="chip-small">
+            {/* strip nikud and strip dups can be safely assumed to be always on.*/}
+            {/* <label className="chip-small">
               <input type="checkbox" checked={stripNiqqudFlag} onChange={(e) => setStripNiqqudFlag(e.target.checked)} /> ללא ניקוד
-            </label>
-            <label className="chip-small">
+            </label> */}
+            {/* <label className="chip-small">
               <input type="checkbox" checked={unique} onChange={(e) => setUnique(e.target.checked)} /> ללא כפילויות
-            </label>
+            </label> */}
             <label className="chip-small">
               <input type="checkbox" checked={sort} onChange={(e) => setSort(e.target.checked)} /> מיון
             </label>
@@ -695,10 +696,6 @@ export const HebrewMatcher = ({ className }) => {
             ))}
           </div>
         </div>
-
-        <p className="small" style={{ marginTop: '12px' }}>
-          ברירות מחדל נטענות מ-<a href="https://github.com/eyaler/hebrew_wordlists" target="_blank" rel="noopener">eyaler/hebrew_wordlists</a>.
-        </p>
       </div>
     </div>
   );

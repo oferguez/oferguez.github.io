@@ -16,7 +16,7 @@ body {
 }
 
 .wrap {
-  max-width: 800px;
+  max-width: 400px;
   margin: 0 auto;
   padding: 16px;
 }
@@ -32,6 +32,7 @@ body {
 h1 {
   margin: 0 0 8px;
   font-size: 1.4rem;
+  text-align: center;
 }
 
 p.muted {
@@ -197,8 +198,6 @@ a {
 }
 
 .search-btn-dominant {
-  font-size: 1.2rem !important;
-  padding: 12px 24px !important;
   border-radius: 12px !important;
   font-weight: 700 !important;
   letter-spacing: 0.5px;
@@ -494,12 +493,42 @@ a {
 }
 
 .custom-sources summary {
-  padding: 8px 12px;
+  padding-right: 12px;
   cursor: pointer;
   font-weight: 600;
   font-size: 0.9rem;
   color: var(--muted);
   border-radius: 8px;
+  position: relative;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  list-style: none;
+}
+
+.custom-sources summary:hover {
+  color: var(--fg);
+  background: rgba(34, 211, 238, 0.1);
+}
+
+.custom-sources summary::marker {
+  display: none;
+}
+
+.custom-sources summary::-webkit-details-marker {
+  display: none;
+}
+
+.custom-sources summary::before {
+  content: "◀";
+  color: var(--accent);
+  font-size: 1.4em;
+  margin-left: 8px;
+  transition: transform 0.2s ease;
+}
+
+.custom-sources[open] summary::before {
+  transform: rotate(-90deg);
 }
 
 .custom-sources[open] summary {

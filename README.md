@@ -5,6 +5,7 @@ A React-based landing page that serves as a centralized hub for various web appl
 ## Todo
 
 ### are te word lists being hashed locally after first load? and for how long? lifespan
+### find what are the /a/b/c etc suffixes in he_IL
 ### Colour Scheme
 ### available sublinks
 ### back to main screen link
