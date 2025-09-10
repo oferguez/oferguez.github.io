@@ -102,6 +102,11 @@ textarea::placeholder {
   background: transparent;
 }
 
+.source-dic-name {
+  width: 100px;
+  max-width: 100px;
+}
+
 .chips-compact {
   display: flex;
   flex-wrap: wrap;
@@ -120,6 +125,14 @@ textarea::placeholder {
   align-items: center;
   gap: 4px;
   cursor: pointer;
+}
+
+.chip-small-fit {
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.7rem;
 }
 
 .chip-small input[type="checkbox"] {
@@ -577,4 +590,37 @@ a {
   font-size: 0.8rem;
   color: var(--muted);
   font-style: italic;
+}
+
+.status-chip {
+  font-size: 0.6rem;
+  max-width: 160px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  color: var(--accent);
+  background: rgba(34, 211, 238, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.source-status {
+  font-size: 12px;
+  margin-left: 6px;
+  display: flex;
+  font-weight: 600;
+}
+
+
+.source-status.error {
+  color: #ef4444;
+}
+
+.source-status.success {
+  color: #10b981;
 }

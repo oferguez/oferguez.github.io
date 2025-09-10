@@ -239,7 +239,9 @@ export const HebrewMatcher = ({ className }) => {
 
     setStatus("מתחיל חיפוש...");
     
-    // Reset source status
+    // Clear previous results and reset state
+    setMatches([]);
+    setStats({ total: 0, matched: 0, time: 0 });
     setSourceStatus({});
     
     try {
@@ -424,12 +426,12 @@ export const HebrewMatcher = ({ className }) => {
                         }
                       }}
                     />
-                    <span>תארים</span>
+                    <span className="source-dic-name">תארים</span>
                     {sourceStatus.adjectives?.status === 'error' && (
-                      <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️</span>
+                      <span className="source-status error">⚠️</span>
                     )}
                     {sourceStatus.adjectives?.status === 'success' && (
-                      <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.adjectives.count.toLocaleString()}</span>
+                      <span className="source-status success">✓ {sourceStatus.adjectives.count.toLocaleString()}</span>
                     )}
                   </label>
                   <label className="checkbox-label">
@@ -444,12 +446,12 @@ export const HebrewMatcher = ({ className }) => {
                         }
                       }}
                     />
-                    <span>שמות עצם</span>
+                    <span className="source-dic-name">שמות עצם</span>
                     {sourceStatus.nouns?.status === 'error' && (
-                      <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️</span>
+                      <span className="source-status error">⚠️</span>
                     )}
                     {sourceStatus.nouns?.status === 'success' && (
-                      <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.nouns.count.toLocaleString()}</span>
+                      <span className="source-status success">✓ {sourceStatus.nouns.count.toLocaleString()}</span>
                     )}
                   </label>
                   <label className="checkbox-label">
@@ -464,12 +466,12 @@ export const HebrewMatcher = ({ className }) => {
                         }
                       }}
                     />
-                    <span>פעלים</span>
+                    <span className="source-dic-name">פעלים</span>
                     {sourceStatus.verbs?.status === 'error' && (
-                      <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️</span>
+                      <span className="source-status error">⚠️</span>
                     )}
                     {sourceStatus.verbs?.status === 'success' && (
-                      <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.verbs.count.toLocaleString()}</span>
+                      <span className="source-status success">✓ {sourceStatus.verbs.count.toLocaleString()}</span>
                     )}
                   </label>
                   <label className="checkbox-label">
@@ -484,12 +486,12 @@ export const HebrewMatcher = ({ className }) => {
                         }
                       }}
                     />
-                    <span>מילון מערכת</span>
+                    <span className="source-dic-name">מילון מערכת</span>
                     {sourceStatus.he_IL?.status === 'error' && (
-                      <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️</span>
+                      <span className="source-status error">⚠️</span>
                     )}
                     {sourceStatus.he_IL?.status === 'success' && (
-                      <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.he_IL.count.toLocaleString()}</span>
+                      <span className="source-status success">✓ {sourceStatus.he_IL.count.toLocaleString()}</span>
                     )}
                   </label>
                   {customWordlists.map((customList, index) => (
@@ -553,12 +555,16 @@ export const HebrewMatcher = ({ className }) => {
             <label className="chip-small">
               <input type="checkbox" checked={wholeWord} onChange={(e) => setWholeWord(e.target.checked)} /> מילה שלמה
             </label>
+            {status && status !== "בוצע." && (
+              <label className="chip-small chip-small-fit">
+                {status}
+              </label>
+            )}
           </div>
 
           <div className="secondary-actions">
             <button onClick={() => setShowLetterSelector(true)} className="btn-secondary">בחירת אותיות</button>
             <button onClick={handleDownload} className="btn-secondary">הורד תוצאות</button>
-            {status && <span className="status-text">{status}</span>}
           </div>
           
           {/* Letter Constraints Display */}
