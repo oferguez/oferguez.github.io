@@ -38,6 +38,27 @@ body {
   box-shadow: 0 4px 16px rgba(0, 0, 0, .2);
 }
 
+.header-nav {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.home-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.home-link:hover {
+  background: rgba(143, 225, 160, 0.1);
+  transform: translateX(-2px);
+}
+
 h1 {
   margin: 0 0 8px;
   font-size: 1.4rem;

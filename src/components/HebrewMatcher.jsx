@@ -393,6 +393,9 @@ export const HebrewMatcher = ({ className }) => {
     <div className={className} dir="rtl" lang="he">
       <div className="wrap">
         <div className="card">
+          <div className="header-nav">
+            <a href="/landing/" className="home-link">← חזרה לעמוד הראשי</a>
+          </div>
           <h1>חיפוש מילים לפי תבנית</h1>
           <p className="muted compact">
             השתמש/י ב-<span className="kbd">?</span> לאות כלשהי. דוגמה: <span className="kbd">ר?וא?</span>
