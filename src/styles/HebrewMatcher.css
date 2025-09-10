@@ -695,3 +695,23 @@ a {
   font-style: italic;
   opacity: 0.8;
 }
+
+/* Source Selection Header */
+.source-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.source-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.source-actions .btn-small {
+  font-size: 0.7rem !important;
+  padding: 3px 8px !important;
+  min-height: auto !important;
+  margin-left: 6px !important;
+}
