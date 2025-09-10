@@ -1,25 +1,18 @@
 :root {
-  /* New color scheme variables */
-/*   --colour1: rgb(132, 153, 79);  
-  --colour2: rgb(255, 231, 151);  
-  --colour3: rgb(252, 181, 59);  
-  --colour4: rgb(180, 82, 83);   
-  
-
- */
   --colour1: rgb(114, 125, 115);
   --colour2: rgb(170, 185, 154);
   --colour3: rgb(208, 221, 208);
   --colour4: rgb(240, 240, 215);
   --colour5: rgb(143, 225, 160);
-  
+  --colour6: rgb(225, 143, 150);
+
+  --colour-selected: var(--colour5);
+  --colour-deselected: var(--colour6);  
   --bg: var(--colour2);
   --fg: var(--colour1);
   --muted: var(--colour3);
   --card: var(--colour1);
   --accent: var(--colour5);
-
-
 }
 
 html,
@@ -336,12 +329,13 @@ a {
   background: var(--card);
   border: 1px solid #1f2937;
   border-radius: 16px;
-  padding: 24px;
+  /* padding: 16px; */
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-  max-width: 90vw;
-  max-height: 90vh;
+  max-width: 95vw;
+  max-height: 85vh;
   overflow-y: auto;
-  min-width: 600px;
+  width: 500px;
+  min-width: 300px;
 }
 
 .letter-dialog-header {
@@ -376,9 +370,13 @@ a {
   background: #0b1220;
   border: 1px solid #1f2937;
   border-radius: 12px;
-  padding: 16px;
+  /* padding: 16px; */
+  padding-right: 4px;
   margin-bottom: 20px;
+  margin-right: 8px;
+  margin-left: 8px;
   color: var(--muted);
+  font-size: 0.8rem;
 }
 
 .letter-instructions p {
@@ -400,18 +398,18 @@ a {
 
 .keyboard-row {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   justify-content: center;
 }
 
 .keyboard-key {
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  font-size: 18px;
+  border-radius: 6px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   user-select: none;
@@ -445,14 +443,14 @@ a {
 }
 
 .keyboard-key.selected:hover {
-  background: var(--colour3);
-  border-color: var(--colour1);
+  /* background: var(--colour3); */
+  border-color: var(--colour-selected);
 }
 
 .keyboard-key.deselected {
-  background: var(--colour4);
+  /* background: var(--colour4); */
   color: white;
-  border-color: var(--colour4);
+  border-color: var(--colour-deselected);
   box-shadow: 0 0 8px rgba(180, 82, 83, 0.3);
 }
 
@@ -475,20 +473,21 @@ a {
 }
 
 .selected-letters {
-  color: var(--colour1);
+  color: var(--selected-letter);
   font-weight: 600;
 }
 
 .deselected-letters {
-  color: var(--colour4);
+  color: var(--deselected-letter);
   font-weight: 600;
 }
 
 .letter-dialog-actions {
   display: flex;
   gap: 12px;
-  justify-content: flex-end;
-  margin-top: 20px;
+  justify-content: flex-start;
+  margin: 20px;
+  margin-right: 8px;
 }
 
 .letter-dialog-actions .btn {
@@ -500,17 +499,29 @@ a {
   .letter-dialog {
     min-width: 0;
     width: 95vw;
-    margin: 20px;
+    margin: 10px;
+    padding: 12px;
+    max-height: 90vh;
   }
   
   .keyboard-key {
-    width: 38px;
-    height: 38px;
-    font-size: 16px;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
   }
   
   .keyboard-row {
-    gap: 3px;
+    gap: 2px;
+  }
+  
+  .letter-instructions {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .letter-instructions p {
+    margin: 2px 0;
+    font-size: 0.85rem;
   }
 }
 

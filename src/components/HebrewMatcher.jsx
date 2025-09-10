@@ -202,11 +202,16 @@ function downloadTxt(lines, filename = "matches.txt") {
 
 // Hebrew QWERTY keyboard layout
 const HEBREW_KEYBOARD = [
-  { row: 0, keys: ["'", "1-!", "2-@", "3-#", "4-$", "5-%", "6-^", "7-&", "8-*", "9-(", "0-)", "-", "="] },
-  { row: 1, keys: ["ק", "ר", "א", "ט", "ו", "ן", "ם", "פ", "]", "[", "\\"] },
-  { row: 2, keys: ["ש", "ד", "ג", "כ", "ע", "י", "ח", "ל", "ך", "ף", ",", "."] },
-  { row: 3, keys: ["ז", "ס", "ב", "ה", "נ", "מ", "צ", "ת", "ץ"] }
+  { row: 0, keys: ["ק", "ר", "א", "ט", "ו", "ן", "ם", "פ"] },
+  { row: 1, keys: ["ש", "ד", "ג", "כ", "ע", "י", "ח", "ל", "ך", "ף"] },
+  { row: 2, keys: ["ז", "ס", "ב", "ה", "נ", "מ", "צ", "ת", "ץ"] }
 ];
+// const HEBREW_KEYBOARD = [
+//   { row: 0, keys: ["'", "1-!", "2-@", "3-#", "4-$", "5-%", "6-^", "7-&", "8-*", "9-(", "0-)", "-", "="] },
+//   { row: 1, keys: ["ק", "ר", "א", "ט", "ו", "ן", "ם", "פ", "]", "[", "\\"] },
+//   { row: 2, keys: ["ש", "ד", "ג", "כ", "ע", "י", "ח", "ל", "ך", "ף", ",", "."] },
+//   { row: 3, keys: ["ז", "ס", "ב", "ה", "נ", "מ", "צ", "ת", "ץ"] }
+// ];
 
 
 export const HebrewMatcher = ({ className }) => {
@@ -315,8 +320,14 @@ export const HebrewMatcher = ({ className }) => {
         // Right click: grey -> red -> grey
         newState = current === 'deselected' ? undefined : 'deselected';
       } else {
-        // Left click: grey -> green -> grey  
-        newState = current === 'selected' ? undefined : 'selected';
+        // Left click cycles: grey -> green -> red -> grey (mobile-friendly)
+        if (current === undefined) {
+          newState = 'selected';
+        } else if (current === 'selected') {
+          newState = 'deselected';
+        } else {
+          newState = undefined;
+        }
       }
       
       const newStates = { ...prev };
@@ -607,9 +618,9 @@ export const HebrewMatcher = ({ className }) => {
                 </div>
                 
                 <div className="letter-instructions">
-                  <p><strong>לחיצה שמאלית:</strong> אות חייבת להופיע (ירוק)</p>
-                  <p><strong>לחיצה ימנית:</strong> אות לא מופיעה (אדום)</p>
-                  <p><strong>אפור:</strong> אין הגבלה על האות</p>
+                  <p><strong>לחיצה:</strong> מעבר בין מצבים - אפור ← ירוק ← אדום ← אפור</p>
+                  <p><strong>ירוק:</strong> אות חייבת להופיע | <strong>אדום:</strong> אות לא מופיעה | <strong>אפור:</strong> אין הגבלה</p>
+                  <p><strong>לחיצה ימנית:</strong> ישירות למצב אדום (במחשב)</p>
                 </div>
                 
                 <div className="hebrew-keyboard">
@@ -656,7 +667,7 @@ export const HebrewMatcher = ({ className }) => {
                 {(() => {
                   const { selected, deselected } = getSelectedDeselectedSummary();
                   return (
-                    <div className="letter-summary">
+                    <div className="letter-instructions">
                       {selected.length > 0 && (
                         <div>אותיות שחייבות להופיע: <span className="selected-letters">{selected.join(', ')}</span></div>
                       )}
