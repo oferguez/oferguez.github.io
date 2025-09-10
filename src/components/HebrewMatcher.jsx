@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 
 const sources = {
-  adjectives: "adjectives.txt",
-  nouns: "nouns.txt",
-  verbs: "verbs_no_fatverb.txt",
-  he_IL: "he_IL.dic",
-  names: "names.csv",
-  settlements: "settlements.txt",
-  biblical: "bible.txt",
+  adjectives: { url: "adjectives.txt", name: "תארים" },
+  nouns: { url: "nouns.txt", name: "שמות עצם" },
+  verbs: { url: "verbs_no_fatverb.txt", name: "פעלים" },
+  he_IL: { url: "he_IL.dic", name: "מילון עברית" },
+  names: { url: "names.csv", name: "שמות פרטיים" },
+  settlements: { url: "settlements.txt", name: "יישובים" },
+  biblical: { url: "bible.txt", name: "תנ\"ך" },
 };
 
 const BATCH_SIZE = 10000; // Process wordlists in batches to avoid stack overflow
@@ -56,7 +56,7 @@ async function loadWordlist(sourceKey, customUrl, pasted, opts) {
       throw new Error("בחר/י מקור: URL או הדבקה ידנית");
     }
   } else {
-    const url = sources[sourceKey];
+    const url = sources[sourceKey].url;
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error("טעינת מקור ברירת מחדל נכשלה: " + res.status);
     text = await res.text();
@@ -77,7 +77,7 @@ async function loadWordlist(sourceKey, customUrl, pasted, opts) {
   return words;
 }
 
-async function searchInWordlist(words, pattern, wholeWord, onProgress, letterConstraints = null) {
+async function searchInWordlist(words, pattern, wholeWord, onProgress, letterConstraints = null, sourceName = null) {
   const rx = templateToRegex(pattern, wholeWord);
   const matches = [];
   
@@ -110,14 +110,18 @@ async function searchInWordlist(words, pattern, wholeWord, onProgress, letterCon
   
   if (words.length <= BATCH_SIZE) {
     // Small wordlist - process all at once
-    return words.filter(w => rx.test(normalizeFinalLetters(w)) && passesLetterConstraints(w));
+    return words
+      .filter(w => rx.test(normalizeFinalLetters(w)) && passesLetterConstraints(w))
+      .map(w => ({ word: w, sources: sourceName ? [sourceName] : [] }));
   }
   
   // Large wordlist - process in batches
   const totalBatches = Math.ceil(words.length / BATCH_SIZE);
   for (let i = 0; i < words.length; i += BATCH_SIZE) {
     const batch = words.slice(i, i + BATCH_SIZE);
-    const batchMatches = batch.filter(w => rx.test(normalizeFinalLetters(w)) && passesLetterConstraints(w));
+    const batchMatches = batch
+      .filter(w => rx.test(normalizeFinalLetters(w)) && passesLetterConstraints(w))
+      .map(w => ({ word: w, sources: sourceName ? [sourceName] : [] }));
     matches.push(...batchMatches);
     
     if (onProgress) {
@@ -139,18 +143,19 @@ async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts
   // Process each source individually
   for (const sourceKey of sourceKeys) {
     try {
-      if (onProgress) onProgress(`טוען ${sourceKey}...`);
+      if (onProgress) onProgress(`טוען ${sources[sourceKey].name}...`);
       
       const words = await loadWordlist(sourceKey, null, null, opts);
       allWordCounts.total += words.length;
       
-      if (onProgress) onProgress(`מחפש ב-${sourceKey}...`);
+      if (onProgress) onProgress(`מחפש ב-${sources[sourceKey].name}...`);
       
       const matches = await searchInWordlist(words, pattern, opts.wholeWord, 
         (currentBatch, totalBatches) => {
-          if (onProgress) onProgress(`מחפש ב-${sourceKey} (חלק ${currentBatch}/${totalBatches})...`);
+          if (onProgress) onProgress(`מחפש ב-${sources[sourceKey].name} (חלק ${currentBatch}/${totalBatches})...`);
         },
-        letterConstraints
+        letterConstraints,
+        sources[sourceKey].name
       );
       
       allMatches.push(...matches);
@@ -167,31 +172,38 @@ async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts
   for (const customList of customWordlists) {
     if (onProgress) onProgress(`מחפש ב-${customList.name}...`);
     
-    const matches = await searchInWordlist(customList.words, pattern, opts.wholeWord, null, letterConstraints);
+    const matches = await searchInWordlist(customList.words, pattern, opts.wholeWord, null, letterConstraints, customList.name);
     allMatches.push(...matches);
     allWordCounts.total += customList.words.length;
     allWordCounts.matched += matches.length;
   }
   
-  // Remove duplicates if requested
+  // Remove duplicates if requested and merge sources
   let finalMatches = allMatches;
   if (opts.unique) {
     if (onProgress) onProgress("מסיר כפילויות...");
-    const seen = new Set();
-    finalMatches = [];
-    for (const word of allMatches) {
-      if (!seen.has(word)) {
-        seen.add(word);
-        finalMatches.push(word);
+    const wordMap = new Map();
+    for (const match of allMatches) {
+      const word = match.word;
+      if (wordMap.has(word)) {
+        // Merge sources for duplicate words
+        wordMap.get(word).sources.push(...match.sources);
+      } else {
+        wordMap.set(word, { word, sources: [...match.sources] });
       }
     }
+    finalMatches = Array.from(wordMap.values());
     allWordCounts.matched = finalMatches.length;
   }
   
   return { matches: finalMatches, stats: allWordCounts };
 }
 
-function downloadTxt(lines, filename = "matches.txt") {
+function downloadTxt(matches, filename = "matches.txt") {
+  const lines = matches.map(match => {
+    const sources = match.sources && match.sources.length > 0 ? ` (${match.sources.join(', ')})` : '';
+    return `${match.word || match}${sources}`;
+  });
   const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -212,7 +224,7 @@ const HEBREW_KEYBOARD = [
 
 export const HebrewMatcher = ({ className }) => {
   const [pattern, setPattern] = useState("אהב?");
-  const [selectedSources, setSelectedSources] = useState(["adjectives", "nouns", "verbs", "he_IL", "names"]);
+  const [selectedSources, setSelectedSources] = useState(["adjectives", "nouns", "verbs", "he_IL", "names", "settlements", "biblical"]);
   const [customUrl, setCustomUrl] = useState("");
   const [paste, setPaste] = useState("");
   const [customWordlists, setCustomWordlists] = useState([]);
@@ -285,7 +297,7 @@ export const HebrewMatcher = ({ className }) => {
       let finalResults = results;
       if (sort) {
         setStatus("מיין תוצאות...");
-        finalResults.sort((a, b) => a.localeCompare(b));
+        finalResults.sort((a, b) => (a.word || a).localeCompare(b.word || b));
       }
       
       const t1 = performance.now();
@@ -436,7 +448,7 @@ export const HebrewMatcher = ({ className }) => {
                         }
                       }}
                     />
-                    <span className="source-dic-name">תארים</span>
+                    <span className="source-dic-name">{sources.adjectives.name}</span>
                     {sourceStatus.adjectives?.status === 'error' && (
                       <span className="source-status error">⚠️</span>
                     )}
@@ -456,7 +468,7 @@ export const HebrewMatcher = ({ className }) => {
                         }
                       }}
                     />
-                    <span className="source-dic-name">שמות עצם</span>
+                    <span className="source-dic-name">{sources.nouns.name}</span>
                     {sourceStatus.nouns?.status === 'error' && (
                       <span className="source-status error">⚠️</span>
                     )}
@@ -476,7 +488,7 @@ export const HebrewMatcher = ({ className }) => {
                         }
                       }}
                     />
-                    <span className="source-dic-name">פעלים</span>
+                    <span className="source-dic-name">{sources.verbs.name}</span>
                     {sourceStatus.verbs?.status === 'error' && (
                       <span className="source-status error">⚠️</span>
                     )}
@@ -496,7 +508,7 @@ export const HebrewMatcher = ({ className }) => {
                         }
                       }}
                     />
-                    <span className="source-dic-name">מילון מערכת</span>
+                    <span className="source-dic-name">{sources.he_IL.name}</span>
                     {sourceStatus.he_IL?.status === 'error' && (
                       <span className="source-status error">⚠️</span>
                     )}
@@ -517,7 +529,7 @@ export const HebrewMatcher = ({ className }) => {
                         }
                       }}
                     />
-                    <span className="source-dic-name">שמות</span>
+                    <span className="source-dic-name">{sources.names.name}</span>
                     {sourceStatus.names?.status === 'error' && (
                       <span className="source-status error">⚠️</span>
                     )}
@@ -538,7 +550,7 @@ export const HebrewMatcher = ({ className }) => {
                         }
                       }}
                     />
-                    <span className="source-dic-name">יישובים</span>
+                    <span className="source-dic-name">{sources.settlements.name}</span>
                     {sourceStatus.settlements?.status === 'error' && (
                       <span className="source-status error">⚠️</span>
                     )}
@@ -559,11 +571,11 @@ export const HebrewMatcher = ({ className }) => {
                         }
                       }}
                     />
-                    <span className="source-dic-name">תנ"ך</span>
-                    {sourceStatus.settlements?.status === 'error' && (
+                    <span className="source-dic-name">{sources.biblical.name}</span>
+                    {sourceStatus.biblical?.status === 'error' && (
                       <span className="source-status error">⚠️</span>
                     )}
-                    {sourceStatus.settlements?.status === 'success' && (
+                    {sourceStatus.biblical?.status === 'success' && (
                       <span className="source-status success">✓ {sourceStatus.biblical.count.toLocaleString()}</span>
                     )}
                   </label>
@@ -772,7 +784,10 @@ export const HebrewMatcher = ({ className }) => {
           </div>
           <div className="grid" style={{ marginTop: '12px' }}>
             {matches.map((match, index) => (
-              <div key={index} className="result">{match}</div>
+              <div key={index} className="result">
+                <div className="match-word">{match.word}</div>
+                <div className="match-sources">({match.sources.join(', ')})</div>
+              </div>
             ))}
           </div>
         </div>

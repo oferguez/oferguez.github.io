@@ -11,7 +11,7 @@ A React-based landing page that serves as a centralized hub for various web appl
 - [ ] available sublinks
 - [x] back to main screen link
 - [ ] refactor sources selection, so it will generate the check box list of sources automatically
-- [ ] in the result also specify from what sources were the words found in 
+- [x] in the result also specify from what sources were the words found in 
 
 
 
