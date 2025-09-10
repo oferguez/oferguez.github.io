@@ -4,8 +4,8 @@ const sources = {
   adjectives: { url: "adjectives.txt", name: "תארים" },
   nouns: { url: "nouns.txt", name: "שמות עצם" },
   verbs: { url: "verbs_no_fatverb.txt", name: "פעלים" },
-  he_IL: { url: "he_IL.dic", name: "מילון עברית" },
-  names: { url: "names.csv", name: "שמות פרטיים" },
+  he_IL: { url: "he_IL.dic", name: "מילון מערכת" },
+  names: { url: "names.csv", name: "שמות" },
   settlements: { url: "settlements.txt", name: "יישובים" },
   biblical: { url: "bible.txt", name: "תנ\"ך" },
 };
