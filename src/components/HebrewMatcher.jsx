@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
 
-const sources = {
-  adjectives: "adjectives.txt",
-  nouns: "nouns.txt",
-  verbs: "verbs_no_fatverb.txt",
-  he_IL: "he_IL.dic"
-};
+const sources = [
+  { id: "he_IL", url: "he_IL.dic", name: "מילון מערכת" },
+  { id: "names", url: "names.csv", name: "שמות" },
+  { id: "settlements", url: "settlements.txt", name: "יישובים" },
+  { id: "biblical", url: "bible.txt", name: "תנ\"ך" },
+  { id: "adjectives", url: "adjectives.txt", name: "תארים" },
+  { id: "nouns", url: "nouns.txt", name: "שמות עצם" },
+  { id: "verbs", url: "verbs_no_fatverb.txt", name: "פעלים" },
+];
 
 const BATCH_SIZE = 10000; // Process wordlists in batches to avoid stack overflow
+
+// Helper function to find source by ID
+const getSource = (sourceId) => sources.find(s => s.id === sourceId);
 
 const HEBREW_BLOCK = /[\u0590-\u05FF]/;
 const HEBREW_LETTERS_CLASS = "[\\u0590-\\u05FF]";
@@ -53,7 +59,7 @@ async function loadWordlist(sourceKey, customUrl, pasted, opts) {
       throw new Error("בחר/י מקור: URL או הדבקה ידנית");
     }
   } else {
-    const url = sources[sourceKey];
+    const url = getSource(sourceKey).url;
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error("טעינת מקור ברירת מחדל נכשלה: " + res.status);
     text = await res.text();
@@ -74,7 +80,7 @@ async function loadWordlist(sourceKey, customUrl, pasted, opts) {
   return words;
 }
 
-async function searchInWordlist(words, pattern, wholeWord, onProgress, letterConstraints = null) {
+async function searchInWordlist(words, pattern, wholeWord, onProgress, letterConstraints = null, sourceName = null) {
   const rx = templateToRegex(pattern, wholeWord);
   const matches = [];
   
@@ -107,14 +113,18 @@ async function searchInWordlist(words, pattern, wholeWord, onProgress, letterCon
   
   if (words.length <= BATCH_SIZE) {
     // Small wordlist - process all at once
-    return words.filter(w => rx.test(normalizeFinalLetters(w)) && passesLetterConstraints(w));
+    return words
+      .filter(w => rx.test(normalizeFinalLetters(w)) && passesLetterConstraints(w))
+      .map(w => ({ word: w, sources: sourceName ? [sourceName] : [] }));
   }
   
   // Large wordlist - process in batches
   const totalBatches = Math.ceil(words.length / BATCH_SIZE);
   for (let i = 0; i < words.length; i += BATCH_SIZE) {
     const batch = words.slice(i, i + BATCH_SIZE);
-    const batchMatches = batch.filter(w => rx.test(normalizeFinalLetters(w)) && passesLetterConstraints(w));
+    const batchMatches = batch
+      .filter(w => rx.test(normalizeFinalLetters(w)) && passesLetterConstraints(w))
+      .map(w => ({ word: w, sources: sourceName ? [sourceName] : [] }));
     matches.push(...batchMatches);
     
     if (onProgress) {
@@ -136,18 +146,19 @@ async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts
   // Process each source individually
   for (const sourceKey of sourceKeys) {
     try {
-      if (onProgress) onProgress(`טוען ${sourceKey}...`);
+      if (onProgress) onProgress(`טוען ${getSource(sourceKey).name}...`);
       
       const words = await loadWordlist(sourceKey, null, null, opts);
       allWordCounts.total += words.length;
       
-      if (onProgress) onProgress(`מחפש ב-${sourceKey}...`);
+      if (onProgress) onProgress(`מחפש ב-${getSource(sourceKey).name}...`);
       
       const matches = await searchInWordlist(words, pattern, opts.wholeWord, 
         (currentBatch, totalBatches) => {
-          if (onProgress) onProgress(`מחפש ב-${sourceKey} (חלק ${currentBatch}/${totalBatches})...`);
+          if (onProgress) onProgress(`מחפש ב-${getSource(sourceKey).name} (חלק ${currentBatch}/${totalBatches})...`);
         },
-        letterConstraints
+        letterConstraints,
+        getSource(sourceKey).name
       );
       
       allMatches.push(...matches);
@@ -164,31 +175,38 @@ async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts
   for (const customList of customWordlists) {
     if (onProgress) onProgress(`מחפש ב-${customList.name}...`);
     
-    const matches = await searchInWordlist(customList.words, pattern, opts.wholeWord, null, letterConstraints);
+    const matches = await searchInWordlist(customList.words, pattern, opts.wholeWord, null, letterConstraints, customList.name);
     allMatches.push(...matches);
     allWordCounts.total += customList.words.length;
     allWordCounts.matched += matches.length;
   }
   
-  // Remove duplicates if requested
+  // Remove duplicates if requested and merge sources
   let finalMatches = allMatches;
   if (opts.unique) {
     if (onProgress) onProgress("מסיר כפילויות...");
-    const seen = new Set();
-    finalMatches = [];
-    for (const word of allMatches) {
-      if (!seen.has(word)) {
-        seen.add(word);
-        finalMatches.push(word);
+    const wordMap = new Map();
+    for (const match of allMatches) {
+      const word = match.word;
+      if (wordMap.has(word)) {
+        // Merge sources for duplicate words
+        wordMap.get(word).sources.push(...match.sources);
+      } else {
+        wordMap.set(word, { word, sources: [...match.sources] });
       }
     }
+    finalMatches = Array.from(wordMap.values());
     allWordCounts.matched = finalMatches.length;
   }
   
   return { matches: finalMatches, stats: allWordCounts };
 }
 
-function downloadTxt(lines, filename = "matches.txt") {
+function downloadTxt(matches, filename = "matches.txt") {
+  const lines = matches.map(match => {
+    const sources = match.sources && match.sources.length > 0 ? ` (${match.sources.join(', ')})` : '';
+    return `${match.word || match}${sources}`;
+  });
   const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -202,16 +220,14 @@ function downloadTxt(lines, filename = "matches.txt") {
 
 // Hebrew QWERTY keyboard layout
 const HEBREW_KEYBOARD = [
-  { row: 0, keys: ["'", "1-!", "2-@", "3-#", "4-$", "5-%", "6-^", "7-&", "8-*", "9-(", "0-)", "-", "="] },
-  { row: 1, keys: ["ק", "ר", "א", "ט", "ו", "ן", "ם", "פ", "]", "[", "\\"] },
-  { row: 2, keys: ["ש", "ד", "ג", "כ", "ע", "י", "ח", "ל", "ך", "ף", ",", "."] },
-  { row: 3, keys: ["ז", "ס", "ב", "ה", "נ", "מ", "צ", "ת", "ץ"] }
+  { row: 0, keys: ["ק", "ר", "א", "ט", "ו", "ן", "ם", "פ"] },
+  { row: 1, keys: ["ש", "ד", "ג", "כ", "ע", "י", "ח", "ל", "ך", "ף"] },
+  { row: 2, keys: ["ז", "ס", "ב", "ה", "נ", "מ", "צ", "ת", "ץ"] }
 ];
-
 
 export const HebrewMatcher = ({ className }) => {
   const [pattern, setPattern] = useState("אהב?");
-  const [selectedSources, setSelectedSources] = useState(["adjectives", "nouns", "verbs", "he_IL"]);
+  const [selectedSources, setSelectedSources] = useState(["adjectives", "nouns", "verbs", "he_IL", "names", "settlements", "biblical"]);
   const [customUrl, setCustomUrl] = useState("");
   const [paste, setPaste] = useState("");
   const [customWordlists, setCustomWordlists] = useState([]);
@@ -239,7 +255,9 @@ export const HebrewMatcher = ({ className }) => {
 
     setStatus("מתחיל חיפוש...");
     
-    // Reset source status
+    // Clear previous results and reset state
+    setMatches([]);
+    setStats({ total: 0, matched: 0, time: 0 });
     setSourceStatus({});
     
     try {
@@ -282,7 +300,7 @@ export const HebrewMatcher = ({ className }) => {
       let finalResults = results;
       if (sort) {
         setStatus("מיין תוצאות...");
-        finalResults.sort((a, b) => a.localeCompare(b));
+        finalResults.sort((a, b) => (a.word || a).localeCompare(b.word || b));
       }
       
       const t1 = performance.now();
@@ -313,8 +331,14 @@ export const HebrewMatcher = ({ className }) => {
         // Right click: grey -> red -> grey
         newState = current === 'deselected' ? undefined : 'deselected';
       } else {
-        // Left click: grey -> green -> grey  
-        newState = current === 'selected' ? undefined : 'selected';
+        // Left click cycles: grey -> green -> red -> grey (mobile-friendly)
+        if (current === undefined) {
+          newState = 'selected';
+        } else if (current === 'selected') {
+          newState = 'deselected';
+        } else {
+          newState = undefined;
+        }
       }
       
       const newStates = { ...prev };
@@ -380,6 +404,9 @@ export const HebrewMatcher = ({ className }) => {
     <div className={className} dir="rtl" lang="he">
       <div className="wrap">
         <div className="card">
+          <div className="header-nav">
+            <a href="/landing/" className="home-link">← חזרה לעמוד הראשי</a>
+          </div>
           <h1>חיפוש מילים לפי תבנית</h1>
           <p className="muted compact">
             השתמש/י ב-<span className="kbd">?</span> לאות כלשהי. דוגמה: <span className="kbd">ר?וא?</span>
@@ -406,92 +433,54 @@ export const HebrewMatcher = ({ className }) => {
             </div>
           </div>
 
-          <details className="custom-sources" close>
+          <details className="custom-sources">
             <summary>בחירת מילונים</summary>
             <div className="sources-grid">
               <div className="default-sources">
-                <label>מקורות ברירת מחדל</label>
+                <div className="source-header">
+                  <label>מקורות ברירת מחדל</label>
+                  <div className="source-actions">
+                    <button 
+                      type="button"
+                      className="btn-small"
+                      onClick={() => setSelectedSources(sources.map(s => s.id))}
+                    >
+                      בחר/י הכל
+                    </button>
+                    <button 
+                      type="button"
+                      className="btn-small"
+                      onClick={() => setSelectedSources([])}
+                    >
+                      בטל/י הכל
+                    </button>
+                  </div>
+                </div>
                 <div className="source-checkboxes">
-                  <label className="checkbox-label">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedSources.includes('adjectives')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedSources([...selectedSources, 'adjectives']);
-                        } else {
-                          setSelectedSources(selectedSources.filter(s => s !== 'adjectives'));
-                        }
-                      }}
-                    />
-                    <span>תארים</span>
-                    {sourceStatus.adjectives?.status === 'error' && (
-                      <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️</span>
-                    )}
-                    {sourceStatus.adjectives?.status === 'success' && (
-                      <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.adjectives.count.toLocaleString()}</span>
-                    )}
-                  </label>
-                  <label className="checkbox-label">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedSources.includes('nouns')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedSources([...selectedSources, 'nouns']);
-                        } else {
-                          setSelectedSources(selectedSources.filter(s => s !== 'nouns'));
-                        }
-                      }}
-                    />
-                    <span>שמות עצם</span>
-                    {sourceStatus.nouns?.status === 'error' && (
-                      <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️</span>
-                    )}
-                    {sourceStatus.nouns?.status === 'success' && (
-                      <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.nouns.count.toLocaleString()}</span>
-                    )}
-                  </label>
-                  <label className="checkbox-label">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedSources.includes('verbs')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedSources([...selectedSources, 'verbs']);
-                        } else {
-                          setSelectedSources(selectedSources.filter(s => s !== 'verbs'));
-                        }
-                      }}
-                    />
-                    <span>פעלים</span>
-                    {sourceStatus.verbs?.status === 'error' && (
-                      <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️</span>
-                    )}
-                    {sourceStatus.verbs?.status === 'success' && (
-                      <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.verbs.count.toLocaleString()}</span>
-                    )}
-                  </label>
-                  <label className="checkbox-label">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedSources.includes('he_IL')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedSources([...selectedSources, 'he_IL']);
-                        } else {
-                          setSelectedSources(selectedSources.filter(s => s !== 'he_IL'));
-                        }
-                      }}
-                    />
-                    <span>מילון מערכת</span>
-                    {sourceStatus.he_IL?.status === 'error' && (
-                      <span style={{ color: '#ef4444', fontSize: '12px' }}>⚠️</span>
-                    )}
-                    {sourceStatus.he_IL?.status === 'success' && (
-                      <span style={{ color: '#10b981', fontSize: '12px' }}>✓ {sourceStatus.he_IL.count.toLocaleString()}</span>
-                    )}
-                  </label>
+                  {sources.map((source) => (
+                    <label key={source.id} className="checkbox-label">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedSources.includes(source.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedSources([...selectedSources, source.id]);
+                          } else {
+                            setSelectedSources(selectedSources.filter(s => s !== source.id));
+                          }
+                        }}
+                      />
+                      <span className="source-dic-name">{source.name}</span>
+                      {sourceStatus[source.id]?.status === 'error' && (
+                        <span className="source-status error">⚠️</span>
+                      )}
+                      {sourceStatus[source.id]?.status === 'success' && (
+                        <span className="source-status success">✓ {sourceStatus[source.id].count.toLocaleString()}</span>
+                      )}
+                    </label>
+                  ))}
+
+
                   {customWordlists.map((customList, index) => (
                     <label key={index} className="checkbox-label">
                       <input type="checkbox" checked={true} readOnly />
@@ -553,12 +542,16 @@ export const HebrewMatcher = ({ className }) => {
             <label className="chip-small">
               <input type="checkbox" checked={wholeWord} onChange={(e) => setWholeWord(e.target.checked)} /> מילה שלמה
             </label>
+            {status && status !== "בוצע." && (
+              <label className="chip-small chip-small-fit">
+                {status}
+              </label>
+            )}
           </div>
 
           <div className="secondary-actions">
             <button onClick={() => setShowLetterSelector(true)} className="btn-secondary">בחירת אותיות</button>
             <button onClick={handleDownload} className="btn-secondary">הורד תוצאות</button>
-            {status && <span className="status-text">{status}</span>}
           </div>
           
           {/* Letter Constraints Display */}
@@ -601,9 +594,9 @@ export const HebrewMatcher = ({ className }) => {
                 </div>
                 
                 <div className="letter-instructions">
-                  <p><strong>לחיצה שמאלית:</strong> אות חייבת להופיע (ירוק)</p>
-                  <p><strong>לחיצה ימנית:</strong> אות לא מופיעה (אדום)</p>
-                  <p><strong>אפור:</strong> אין הגבלה על האות</p>
+                  <p><strong>לחיצה:</strong> מעבר בין מצבים - אפור ← ירוק ← אדום ← אפור</p>
+                  <p><strong>ירוק:</strong> אות חייבת להופיע | <strong>אדום:</strong> אות לא מופיעה | <strong>אפור:</strong> אין הגבלה</p>
+                  <p><strong>לחיצה ימנית:</strong> ישירות למצב אדום (במחשב)</p>
                 </div>
                 
                 <div className="hebrew-keyboard">
@@ -650,7 +643,7 @@ export const HebrewMatcher = ({ className }) => {
                 {(() => {
                   const { selected, deselected } = getSelectedDeselectedSummary();
                   return (
-                    <div className="letter-summary">
+                    <div className="letter-instructions">
                       {selected.length > 0 && (
                         <div>אותיות שחייבות להופיע: <span className="selected-letters">{selected.join(', ')}</span></div>
                       )}
@@ -691,7 +684,10 @@ export const HebrewMatcher = ({ className }) => {
           </div>
           <div className="grid" style={{ marginTop: '12px' }}>
             {matches.map((match, index) => (
-              <div key={index} className="result">{match}</div>
+              <div key={index} className="result">
+                <div className="match-word">{match.word}</div>
+                <div className="match-sources">({match.sources.join(', ')})</div>
+              </div>
             ))}
           </div>
         </div>
