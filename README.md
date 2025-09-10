@@ -7,7 +7,7 @@ A React-based landing page that serves as a centralized hub for various web appl
 [] iphone display (keyboard dlg)
 [] are the word lists being hashed locally after first load? and for how long? lifespan
 [] find what are the /a/b/c etc suffixes in he_IL
-[] Colour Scheme
+[] Colour Scheme: https://colorhunt.co/palette/727d73aab99ad0ddd0f0f0d7
 [] available sublinks
 [] back to main screen link
 

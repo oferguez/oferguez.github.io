@@ -1,9 +1,25 @@
 :root {
-  --bg: #0f172a;
-  --fg: #e5e7eb;
-  --muted: #94a3b8;
-  --card: #111827;
-  --accent: #22d3ee;
+  /* New color scheme variables */
+/*   --colour1: rgb(132, 153, 79);  
+  --colour2: rgb(255, 231, 151);  
+  --colour3: rgb(252, 181, 59);  
+  --colour4: rgb(180, 82, 83);   
+  
+
+ */
+  --colour1: rgb(114, 125, 115);
+  --colour2: rgb(170, 185, 154);
+  --colour3: rgb(208, 221, 208);
+  --colour4: rgb(240, 240, 215);
+  --colour5: rgb(143, 225, 160);
+  
+  --bg: var(--colour2);
+  --fg: var(--colour1);
+  --muted: var(--colour3);
+  --card: var(--colour1);
+  --accent: var(--colour5);
+
+
 }
 
 html,
@@ -215,8 +231,9 @@ a {
   font-weight: 700 !important;
   letter-spacing: 0.5px;
   min-width: 160px;
-  box-shadow: 0 4px 16px rgba(20, 184, 166, 0.3) !important;
-  background: linear-gradient(135deg, #14b8a6, #06b6d4) !important;
+  box-shadow: 0 4px 16px rgba(132, 153, 79, 0.3) !important;
+  /* background: linear-gradient(135deg, var(--colour1), var(--colour3)) !important; */
+  background: var(--colour5) !important;
   border: none !important;
   position: relative;
   overflow: hidden;
@@ -225,13 +242,13 @@ a {
 
 .search-btn-dominant:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(20, 184, 166, 0.4) !important;
-  background: linear-gradient(135deg, #0d9488, #0891b2) !important;
+  box-shadow: 0 6px 20px rgba(132, 153, 79, 0.4) !important;
+  background: var(--colour4) !important;
 }
 
 .search-btn-dominant:active {
   transform: translateY(0);
-  box-shadow: 0 6px 24px rgba(20, 184, 166, 0.3) !important;
+  box-shadow: 0 6px 24px rgba(132, 153, 79, 0.3) !important;
 }
 
 .search-btn-dominant::before {
@@ -281,22 +298,22 @@ a {
 }
 
 .selected-letters-display {
-  color: #10b981;
+  color: var(--colour1);
   font-weight: 600;
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(132, 153, 79, 0.1);
   padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(132, 153, 79, 0.2);
   font-size: 0.8rem;
 }
 
 .deselected-letters-display {
-  color: #ef4444;
+  color: var(--colour4);
   font-weight: 600;
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(180, 82, 83, 0.1);
   padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(180, 82, 83, 0.2);
   font-size: 0.8rem;
 }
 
@@ -421,27 +438,27 @@ a {
 }
 
 .keyboard-key.selected {
-  background: #059669;
+  background: var(--colour1);
   color: white;
-  border-color: #10b981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+  border-color: var(--colour2);
+  box-shadow: 0 0 8px rgba(132, 153, 79, 0.3);
 }
 
 .keyboard-key.selected:hover {
-  background: #047857;
-  border-color: #059669;
+  background: var(--colour3);
+  border-color: var(--colour1);
 }
 
 .keyboard-key.deselected {
-  background: #dc2626;
+  background: var(--colour4);
   color: white;
-  border-color: #ef4444;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+  border-color: var(--colour4);
+  box-shadow: 0 0 8px rgba(180, 82, 83, 0.3);
 }
 
 .keyboard-key.deselected:hover {
-  background: #b91c1c;
-  border-color: #dc2626;
+  background: rgb(160, 62, 63);
+  border-color: var(--colour4);
 }
 
 .letter-summary {
@@ -458,12 +475,12 @@ a {
 }
 
 .selected-letters {
-  color: #10b981;
+  color: var(--colour1);
   font-weight: 600;
 }
 
 .deselected-letters {
-  color: #ef4444;
+  color: var(--colour4);
   font-weight: 600;
 }
 
@@ -521,7 +538,7 @@ a {
 
 .custom-sources summary:hover {
   color: var(--fg);
-  background: rgba(34, 211, 238, 0.1);
+  background: rgba(255, 231, 151, 0.1);
 }
 
 .custom-sources summary::marker {
@@ -534,7 +551,7 @@ a {
 
 .custom-sources summary::before {
   content: "◀";
-  color: var(--accent);
+  color: var(--colour3);
   font-size: 1.4em;
   margin-left: 8px;
   transition: transform 0.2s ease;
@@ -596,9 +613,9 @@ a {
   font-size: 0.6rem;
   max-width: 160px;
   border-radius: 10px;
-  border: 1px solid #334155;
-  color: var(--accent);
-  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid var(--colour1);
+  color: var(--colour3);
+  background: rgba(255, 231, 151, 0.1);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -618,9 +635,9 @@ a {
 
 
 .source-status.error {
-  color: #ef4444;
+  color: var(--colour4);
 }
 
 .source-status.success {
-  color: #10b981;
+  color: var(--colour1);
 }
