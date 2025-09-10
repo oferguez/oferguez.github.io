@@ -8,6 +8,8 @@
 
   --colour-selected: var(--colour5);
   --colour-deselected: var(--colour6);  
+  --colour-success: var(--colour5);
+  --colour-error: var(--colour6);
   --bg: var(--colour2);
   --fg: var(--colour1);
   --muted: var(--colour3);
@@ -667,9 +669,9 @@ a {
 
 
 .source-status.error {
-  color: var(--colour4);
+  color: var(--colour-error);
 }
 
 .source-status.success {
-  color: var(--colour1);
+  color: var(--colour-success);
 }

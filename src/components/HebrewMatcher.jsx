@@ -4,7 +4,10 @@ const sources = {
   adjectives: "adjectives.txt",
   nouns: "nouns.txt",
   verbs: "verbs_no_fatverb.txt",
-  he_IL: "he_IL.dic"
+  he_IL: "he_IL.dic",
+  names: "names.csv",
+  settlements: "settlements.txt",
+  biblical: "bible.txt",
 };
 
 const BATCH_SIZE = 10000; // Process wordlists in batches to avoid stack overflow
@@ -206,17 +209,10 @@ const HEBREW_KEYBOARD = [
   { row: 1, keys: ["ש", "ד", "ג", "כ", "ע", "י", "ח", "ל", "ך", "ף"] },
   { row: 2, keys: ["ז", "ס", "ב", "ה", "נ", "מ", "צ", "ת", "ץ"] }
 ];
-// const HEBREW_KEYBOARD = [
-//   { row: 0, keys: ["'", "1-!", "2-@", "3-#", "4-$", "5-%", "6-^", "7-&", "8-*", "9-(", "0-)", "-", "="] },
-//   { row: 1, keys: ["ק", "ר", "א", "ט", "ו", "ן", "ם", "פ", "]", "[", "\\"] },
-//   { row: 2, keys: ["ש", "ד", "ג", "כ", "ע", "י", "ח", "ל", "ך", "ף", ",", "."] },
-//   { row: 3, keys: ["ז", "ס", "ב", "ה", "נ", "מ", "צ", "ת", "ץ"] }
-// ];
-
 
 export const HebrewMatcher = ({ className }) => {
   const [pattern, setPattern] = useState("אהב?");
-  const [selectedSources, setSelectedSources] = useState(["adjectives", "nouns", "verbs", "he_IL"]);
+  const [selectedSources, setSelectedSources] = useState(["adjectives", "nouns", "verbs", "he_IL", "names"]);
   const [customUrl, setCustomUrl] = useState("");
   const [paste, setPaste] = useState("");
   const [customWordlists, setCustomWordlists] = useState([]);
@@ -508,6 +504,71 @@ export const HebrewMatcher = ({ className }) => {
                       <span className="source-status success">✓ {sourceStatus.he_IL.count.toLocaleString()}</span>
                     )}
                   </label>
+
+                  <label className="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedSources.includes('names')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSources([...selectedSources, 'names']);
+                        } else {
+                          setSelectedSources(selectedSources.filter(s => s !== 'names'));
+                        }
+                      }}
+                    />
+                    <span className="source-dic-name">שמות</span>
+                    {sourceStatus.names?.status === 'error' && (
+                      <span className="source-status error">⚠️</span>
+                    )}
+                    {sourceStatus.names?.status === 'success' && (
+                      <span className="source-status success">✓ {sourceStatus.names.count.toLocaleString()}</span>
+                    )}
+                  </label>
+
+                  <label className="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedSources.includes('settlements')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSources([...selectedSources, 'settlements']);
+                        } else {
+                          setSelectedSources(selectedSources.filter(s => s !== 'settlements'));
+                        }
+                      }}
+                    />
+                    <span className="source-dic-name">יישובים</span>
+                    {sourceStatus.settlements?.status === 'error' && (
+                      <span className="source-status error">⚠️</span>
+                    )}
+                    {sourceStatus.settlements?.status === 'success' && (
+                      <span className="source-status success">✓ {sourceStatus.settlements.count.toLocaleString()}</span>
+                    )}
+                  </label>
+
+                  <label className="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedSources.includes('biblical')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSources([...selectedSources, 'biblical']);
+                        } else {
+                          setSelectedSources(selectedSources.filter(s => s !== 'biblical'));
+                        }
+                      }}
+                    />
+                    <span className="source-dic-name">תנ"ך</span>
+                    {sourceStatus.settlements?.status === 'error' && (
+                      <span className="source-status error">⚠️</span>
+                    )}
+                    {sourceStatus.settlements?.status === 'success' && (
+                      <span className="source-status success">✓ {sourceStatus.biblical.count.toLocaleString()}</span>
+                    )}
+                  </label>
+
+
                   {customWordlists.map((customList, index) => (
                     <label key={index} className="checkbox-label">
                       <input type="checkbox" checked={true} readOnly />

@@ -10,6 +10,8 @@ A React-based landing page that serves as a centralized hub for various web appl
 - [x] Colour Scheme: https://colorhunt.co/palette/727d73aab99ad0ddd0f0f0d7
 - [ ] available sublinks
 - [x] back to main screen link
+- [ ] refactor sources selection, so it will generate the check box list of sources automatically
+- [ ] in the result also specify from what sources were the words found in 
 
 
 
@@ -79,3 +81,4 @@ This project is private and intended for personal use.
 ### nouns: https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/nouns.txt
 ### verbs: https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/verbs_no_fatverb.txt
 ### he_IL: https://spellcheck-dictionaries.github.io/he_IL/he_IL.dic
+### wordlists: https://github.com/eyaler/hebrew_wordlists
