@@ -10,6 +10,13 @@ const apps = [
     description: 'Search for Hebrew words using patterns with wildcards. Supports regex-like syntax for finding words that match specific letter patterns.',
     tags: ['Hebrew', 'Pattern Matching', 'Text Processing'],
     path: '/hebrew-matcher'
+  },
+  {
+    id: 'rate-calculator',
+    title: 'Win Rate Calculator',
+    description: 'Calculate win rates and determine how many wins or losses are needed to change your percentage. Enter any 2 values to auto-calculate the third.',
+    tags: ['Statistics', 'Gaming', 'Calculator'],
+    path: '/rate-calculator'
   }
 ];
 
