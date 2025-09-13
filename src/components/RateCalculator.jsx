@@ -7,6 +7,9 @@ function RateCalculator() {
   const [losses, setLosses] = useState('');
   const [total, setTotal] = useState('');
   const [result, setResult] = useState(null);
+  const [showMatrix, setShowMatrix] = useState(false);
+  const [matrixRows, setMatrixRows] = useState('10');
+  const [matrixCols, setMatrixCols] = useState('10');
 
   const winsNeededToRoundUp = (w, l) => {
     const r = Math.round(100 * w / (w + l));
@@ -122,11 +125,58 @@ function RateCalculator() {
     }
   };
 
+  const clearAll = () => {
+    setWins('');
+    setLosses('');
+    setTotal('');
+    setResult(null);
+  };
+
+  const generateMatrix = () => {
+    if (!isValidNumber(wins) || !isValidNumber(losses)) return [];
+    
+    const baseWins = Number(wins);
+    const baseLosses = Number(losses);
+    const rows = Number(matrixRows);
+    const cols = Number(matrixCols);
+    
+    const matrix = [];
+    for (let l = 0; l < rows; l++) {
+      const row = [];
+      for (let w = 0; w < cols; w++) {
+        const currentWins = baseWins + w;
+        const currentLosses = baseLosses + l;
+        const rate = Math.round(100 * currentWins / (currentWins + currentLosses));
+        row.push({
+          wins: currentWins,
+          losses: currentLosses,
+          rate: rate
+        });
+      }
+      matrix.push(row);
+    }
+    return matrix;
+  };
+
 
   return (
     <div className="rate-calculator">
       <div className="rate-calculator-header">
-        <Link to="/" className="back-button">← Back to Home</Link>
+        <div className="header-buttons">
+          <Link to="/" className="back-button">← Back to Home Page</Link>
+          <button onClick={clearAll} className="clear-button">
+            ✕ Clear All
+          </button>
+
+          <button 
+            onClick={result ? () => setShowMatrix(true) : undefined} 
+            className={`matrix-button ${result ? 'active' : 'inactive'}`}
+          >
+            📊 View Matrix
+          </button>
+
+
+        </div>
         <h1>Win Rate Calculator</h1>
         <p>Enter any 2 values to calculate win rate and required games</p>
       </div>
@@ -193,6 +243,65 @@ function RateCalculator() {
             <div className="result-content">
               <div className="result-value">+{result.lossesNeeded}</div>
               <div className="result-label">Losses to drop to {result.currentRate - 1}%</div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {showMatrix && (
+        <div className="matrix-dialog-overlay" onClick={() => setShowMatrix(false)}>
+          <div className="matrix-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="matrix-dialog-header">
+              <h2>Win Rate Matrix</h2>
+              <button onClick={() => setShowMatrix(false)} className="close-button">✕</button>
+            </div>
+            
+            <div className="matrix-controls">
+              <div className="matrix-control">
+                <label>Rows (M):</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={matrixRows}
+                  onChange={(e) => setMatrixRows(e.target.value)}
+                />
+              </div>
+              <div className="matrix-control">
+                <label>Columns (N):</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={matrixCols}
+                  onChange={(e) => setMatrixCols(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <div className="matrix-container">
+              <table className="matrix-table">
+                <thead>
+                  <tr>
+                    <th>L\W</th>
+                    {Array.from({length: Number(matrixCols)}, (_, i) => (
+                      <th key={i}>{Number(wins) + i}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {generateMatrix().map((row, rowIndex) => (
+                    <tr key={rowIndex}>
+                      <th>{Number(losses) + rowIndex}</th>
+                      {row.map((cell, colIndex) => (
+                        <td key={colIndex}>
+                          {cell.rate}%
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
