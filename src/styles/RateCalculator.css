@@ -299,8 +299,31 @@
   white-space: nowrap;
 }
 
-.matrix-control input {
+.matrix-control input,
+.matrix-mode-select {
   background: var(--bg);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+  color: var(--fg);
+  padding: 0.5rem;
+  width: 70px;
+  box-sizing: border-box;
+}
+
+.matrix-mode-select {
+  width: 90px;
+  cursor: pointer;
+}
+
+/* Remove spinner arrows from matrix inputs */
+.matrix-control input::-webkit-outer-spin-button,
+.matrix-control input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.matrix-control input[type=number] {
+  -moz-appearance: textfield;
 }
 
 .matrix-container {
@@ -338,6 +361,19 @@
   background: rgba(34, 211, 238, 0.2);
   color: var(--accent);
   font-weight: bold;
+}
+
+.matrix-cell {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.matrix-cell:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(34, 211, 238, 0.3);
+  z-index: 1;
+  position: relative;
 }
 
 @media (max-width: 768px) {

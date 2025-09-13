@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/RateCalculator.css';
 
@@ -10,6 +10,54 @@ function RateCalculator() {
   const [showMatrix, setShowMatrix] = useState(false);
   const [matrixRows, setMatrixRows] = useState('10');
   const [matrixCols, setMatrixCols] = useState('10');
+  const [matrixMode, setMatrixMode] = useState('number');
+
+  // Load settings from localStorage on component mount
+  useEffect(() => {
+    const savedRows = localStorage.getItem('rateCalculator_matrixRows');
+    const savedCols = localStorage.getItem('rateCalculator_matrixCols');
+    const savedMode = localStorage.getItem('rateCalculator_matrixMode');
+    const savedWins = localStorage.getItem('rateCalculator_wins');
+    const savedLosses = localStorage.getItem('rateCalculator_losses');
+    const savedTotal = localStorage.getItem('rateCalculator_total');
+    
+    if (savedRows) setMatrixRows(savedRows);
+    if (savedCols) setMatrixCols(savedCols);
+    if (savedMode) setMatrixMode(savedMode);
+    if (savedWins) setWins(savedWins);
+    if (savedLosses) setLosses(savedLosses);
+    if (savedTotal) setTotal(savedTotal);
+    
+    // Recalculate result if we have wins and losses
+    if (savedWins && savedLosses && isValidNumber(savedWins) && isValidNumber(savedLosses)) {
+      setResult(calculate(Number(savedWins), Number(savedLosses)));
+    }
+  }, []);
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('rateCalculator_matrixRows', matrixRows);
+  }, [matrixRows]);
+
+  useEffect(() => {
+    localStorage.setItem('rateCalculator_matrixCols', matrixCols);
+  }, [matrixCols]);
+
+  useEffect(() => {
+    localStorage.setItem('rateCalculator_matrixMode', matrixMode);
+  }, [matrixMode]);
+
+  useEffect(() => {
+    localStorage.setItem('rateCalculator_wins', wins);
+  }, [wins]);
+
+  useEffect(() => {
+    localStorage.setItem('rateCalculator_losses', losses);
+  }, [losses]);
+
+  useEffect(() => {
+    localStorage.setItem('rateCalculator_total', total);
+  }, [total]);
 
   const winsNeededToRoundUp = (w, l) => {
     const r = Math.round(100 * w / (w + l));
@@ -130,6 +178,11 @@ function RateCalculator() {
     setLosses('');
     setTotal('');
     setResult(null);
+    
+    // Also clear from localStorage
+    localStorage.removeItem('rateCalculator_wins');
+    localStorage.removeItem('rateCalculator_losses');
+    localStorage.removeItem('rateCalculator_total');
   };
 
   const generateMatrix = () => {
@@ -156,6 +209,61 @@ function RateCalculator() {
       matrix.push(row);
     }
     return matrix;
+  };
+
+  const getColorFromPercentage = (percentage, minRate, maxRate) => {
+    // Scale colors to the current display range for better contrast
+    const range = maxRate - minRate;
+    const rawNormalized = range === 0 ? 0.5 : (percentage - minRate) / range;
+    
+    // Use full normalization for clear distinctions, especially for narrow ranges
+    const normalizedValue = rawNormalized;
+    
+    // Proper pastel green scale with more noticeable differences
+    const minGreen = 240; // Light pastel green (high value)
+    const maxGreen = 160; // Darker pastel green (larger range for visibility)
+    const minRed = 220;   // Light red component (less than green)
+    const maxRed = 120;   // Darker red component (larger range)
+    const minBlue = 220;  // Light blue component (less than green)
+    const maxBlue = 120;  // Darker blue component (larger range)
+    
+    const green = Math.round(minGreen + (maxGreen - minGreen) * normalizedValue);
+    const red = Math.round(minRed + (maxRed - minRed) * normalizedValue);
+    const blue = Math.round(minBlue + (maxBlue - minBlue) * normalizedValue);
+    
+    return `rgb(${red}, ${green}, ${blue})`;
+  };
+
+  const handleCellClick = (cellWins, cellLosses) => {
+    setWins(cellWins.toString());
+    setLosses(cellLosses.toString());
+    setTotal((cellWins + cellLosses).toString());
+    setResult(calculate(cellWins, cellLosses));
+  };
+
+  const renderCellContent = (cell) => {
+    if (matrixMode === 'number') {
+      return `${cell.rate}%`;
+    } else if (matrixMode === 'color') {
+      return ''; // Empty content, color only
+    } else { // both
+      return `${cell.rate}%`;
+    }
+  };
+
+  const getCellStyle = (cell, matrix) => {
+    if (matrixMode === 'color' || matrixMode === 'both') {
+      // Get min and max rates from current matrix for scaling
+      const allRates = matrix.flat().map(c => c.rate);
+      const minRate = Math.min(...allRates);
+      const maxRate = Math.max(...allRates);
+      
+      return {
+        backgroundColor: getColorFromPercentage(cell.rate, minRate, maxRate),
+        color: cell.rate > ((minRate + maxRate) / 2) ? 'white' : 'black' // Text color based on relative brightness
+      };
+    }
+    return {};
   };
 
 
@@ -277,6 +385,18 @@ function RateCalculator() {
                   onChange={(e) => setMatrixCols(e.target.value)}
                 />
               </div>
+              <div className="matrix-control">
+                <label>Mode:</label>
+                <select
+                  value={matrixMode}
+                  onChange={(e) => setMatrixMode(e.target.value)}
+                  className="matrix-mode-select"
+                >
+                  <option value="number">Number</option>
+                  <option value="color">Color</option>
+                  <option value="both">Both</option>
+                </select>
+              </div>
             </div>
             
             <div className="matrix-container">
@@ -290,16 +410,24 @@ function RateCalculator() {
                   </tr>
                 </thead>
                 <tbody>
-                  {generateMatrix().map((row, rowIndex) => (
-                    <tr key={rowIndex}>
-                      <th>{Number(losses) + rowIndex}</th>
-                      {row.map((cell, colIndex) => (
-                        <td key={colIndex}>
-                          {cell.rate}%
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                  {(() => {
+                    const matrix = generateMatrix();
+                    return matrix.map((row, rowIndex) => (
+                      <tr key={rowIndex}>
+                        <th>{Number(losses) + rowIndex}</th>
+                        {row.map((cell, colIndex) => (
+                          <td 
+                            key={colIndex}
+                            style={getCellStyle(cell, matrix)}
+                            onClick={() => handleCellClick(cell.wins, cell.losses)}
+                            className="matrix-cell"
+                          >
+                            {renderCellContent(cell)}
+                          </td>
+                        ))}
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
