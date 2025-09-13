@@ -17,6 +17,27 @@ const apps = [
     description: 'Calculate win rates and determine how many wins or losses are needed to change your percentage. Enter any 2 values to auto-calculate the third.',
     tags: ['Statistics', 'Gaming', 'Calculator'],
     path: '/rate-calculator'
+  },
+  {
+    id: 'even-path-finder',
+    title: 'Even Path Finder',
+    description: 'Find the path through a grid with even/odd/triple weights.',
+    tags: [],
+    path: 'https://oferguez.github.io/EvenPathFinder/'
+  },
+  {
+    id: 'arithmetic-game',
+    title: 'Arithmetic game',
+    description: 'Addition & substraction game for kids.',
+    tags: [],
+    path: 'https://oferguez.github.io/Arithmetic-/'
+  },
+  {
+    id: 'language-game',
+    title: 'Language learning game',
+    description: 'Flashcard style language learning game.',
+    tags: [],
+    path: 'https://oferguez.github.io/LanguageLearning/'
   }
 ];
 
