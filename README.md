@@ -14,6 +14,10 @@ A React-based landing page that serves as a centralized hub for various web appl
 - [x] in the result also specify from what sources were the words found in 
 - [ ] about dialog w build info etc
 - [x] rate calc & matrix
+- [x] letter seletor count
+- [ ] letter selector validation
+- [ ] unit tests & CI
+
 
 
 
