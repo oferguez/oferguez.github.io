@@ -19,8 +19,6 @@ A React-based landing page that serves as a centralized hub for various web appl
 - [ ] unit tests & CI
 
 
-
-
 ## Features
 
 - **Landing Page**: Clean, responsive design showcasing available web apps
