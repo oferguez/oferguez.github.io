@@ -91,17 +91,23 @@ async function searchInWordlist(words, pattern, wholeWord, onProgress, letterCon
     
     const { selected, deselected } = letterConstraints;
     const normalizedWord = normalizeFinalLetters(word);
-    const normalizedSelected = selected.map(normalizeFinalLetters);
-    const normalizedDeselected = deselected.map(normalizeFinalLetters);
     
-    // Check that all selected letters appear in the word
-    for (const letter of normalizedSelected) {
-      if (!normalizedWord.includes(letter)) {
+    // Check that all selected letters appear with the required count
+    for (const letterInfo of selected) {
+      const letter = typeof letterInfo === 'string' ? letterInfo : letterInfo.letter;
+      const requiredCount = typeof letterInfo === 'string' ? 1 : letterInfo.count;
+      const normalizedLetter = normalizeFinalLetters(letter);
+      
+      // Count occurrences of the letter in the word
+      const letterCount = (normalizedWord.match(new RegExp(normalizedLetter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), 'g')) || []).length;
+      
+      if (letterCount < requiredCount) {
         return false;
       }
     }
     
     // Check that none of the deselected letters appear in the word
+    const normalizedDeselected = deselected.map(normalizeFinalLetters);
     for (const letter of normalizedDeselected) {
       if (normalizedWord.includes(letter)) {
         return false;
@@ -241,6 +247,7 @@ export const HebrewMatcher = ({ className }) => {
   const [stats, setStats] = useState({ total: 0, matched: 0, time: 0 });
   const [showLetterSelector, setShowLetterSelector] = useState(false);
   const [letterStates, setLetterStates] = useState({}); // 'selected', 'deselected', or undefined (grey)
+  const [letterCounts, setLetterCounts] = useState({}); // count for selected letters
 
   const handleSearch = async () => {
     if (!pattern) {
@@ -347,14 +354,36 @@ export const HebrewMatcher = ({ className }) => {
       } else {
         newStates[letter] = newState;
       }
+      
+      // Initialize count to 1 when letter becomes selected
+      if (newState === 'selected' && !letterCounts[letter]) {
+        setLetterCounts(prevCounts => ({ ...prevCounts, [letter]: 1 }));
+      }
+      // Remove count when letter is no longer selected
+      if (newState !== 'selected' && letterCounts[letter]) {
+        setLetterCounts(prevCounts => {
+          const newCounts = { ...prevCounts };
+          delete newCounts[letter];
+          return newCounts;
+        });
+      }
+      
       return newStates;
     });
+  };
+  
+  const handleLetterCountChange = (letter, count) => {
+    const numCount = Math.max(1, parseInt(count) || 1);
+    setLetterCounts(prev => ({
+      ...prev,
+      [letter]: numCount
+    }));
   };
 
   const getSelectedDeselectedSummary = () => {
     const selected = Object.entries(letterStates)
       .filter(([, state]) => state === 'selected')
-      .map(([letter]) => letter);
+      .map(([letter]) => ({ letter, count: letterCounts[letter] || 1 }));
     const deselected = Object.entries(letterStates)
       .filter(([, state]) => state === 'deselected')
       .map(([letter]) => letter);
@@ -563,7 +592,9 @@ export const HebrewMatcher = ({ className }) => {
                   {selected.length > 0 && (
                     <>
                       <span className="constraint-label">חייבות להופיע:</span> 
-                      <span className="selected-letters-display">{selected.join(', ')}</span>
+                      <span className="selected-letters-display">
+                        {selected.map(item => `${item.letter}${item.count > 1 ? ` (×${item.count})` : ''}`).join(', ')}
+                      </span>
                       <span>     |     </span>
                     </>
                   )}
@@ -597,6 +628,7 @@ export const HebrewMatcher = ({ className }) => {
                   <p><strong>לחיצה:</strong> מעבר בין מצבים - אפור ← ירוק ← אדום ← אפור</p>
                   <p><strong>ירוק:</strong> אות חייבת להופיע | <strong>אדום:</strong> אות לא מופיעה | <strong>אפור:</strong> אין הגבלה</p>
                   <p><strong>לחיצה ימנית:</strong> ישירות למצב אדום (במחשב)</p>
+                  <p><strong>מספר פעמים:</strong> עבור אותיות ירוקות - קבע כמה פעמים האות חייבת להופיע</p>
                 </div>
                 
                 <div className="hebrew-keyboard">
@@ -640,12 +672,43 @@ export const HebrewMatcher = ({ className }) => {
                   ))}
                 </div>
                 
+                {/* Count Controls for Selected Letters */}
+                {(() => {
+                  const { selected } = getSelectedDeselectedSummary();
+                  if (selected.length > 0) {
+                    return (
+                      <div className="letter-count-controls">
+                        <h4>מספר פעמים לכל אות:</h4>
+                        <div className="count-inputs">
+                          {selected.map(item => (
+                            <div key={item.letter} className="count-input-group">
+                              <span className="letter-display">{item.letter}</span>
+                              <input 
+                                type="number" 
+                                min="1" 
+                                max="10"
+                                value={item.count}
+                                onChange={(e) => handleLetterCountChange(item.letter, e.target.value)}
+                                className="count-input"
+                              />
+                              <span className="count-label">פעמים</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+                
                 {(() => {
                   const { selected, deselected } = getSelectedDeselectedSummary();
                   return (
                     <div className="letter-instructions">
                       {selected.length > 0 && (
-                        <div>אותיות שחייבות להופיע: <span className="selected-letters">{selected.join(', ')}</span></div>
+                        <div>אותיות שחייבות להופיע: <span className="selected-letters">
+                          {selected.map(item => `${item.letter}${item.count > 1 ? ` (×${item.count})` : ''}`).join(', ')}
+                        </span></div>
                       )}
                       {deselected.length > 0 && (
                         <div>אותיות שלא יופיעו: <span className="deselected-letters">{deselected.join(', ')}</span></div>
@@ -659,7 +722,10 @@ export const HebrewMatcher = ({ className }) => {
                 
                 <div className="letter-dialog-actions">
                   <button 
-                    onClick={() => setLetterStates({})}
+                    onClick={() => {
+                      setLetterStates({});
+                      setLetterCounts({});
+                    }}
                     className="btn"
                   >
                     נקה הכל
