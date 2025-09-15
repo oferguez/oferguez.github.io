@@ -434,7 +434,7 @@ export const HebrewMatcher = ({ className }) => {
       <div className="wrap">
         <div className="card">
           <div className="header-nav">
-            <a href="/landing/" className="home-link">← חזרה לעמוד הראשי</a>
+            <a href="/" className="home-link">← חזרה לעמוד הראשי</a>
           </div>
           <h1>חיפוש מילים לפי תבנית</h1>
           <p className="muted compact">
