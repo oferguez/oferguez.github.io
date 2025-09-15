@@ -1,10 +1,4 @@
-:root {
-  --bg: #0f172a;
-  --fg: #e5e7eb;
-  --muted: #94a3b8;
-  --card: #111827;
-  --accent: #1d3cec;
-}
+@import './colors.css';
 
 * {
   box-sizing: border-box;
@@ -30,26 +24,45 @@ html, body {
   margin-bottom: 60px;
 }
 
+.gradient-text-forward {
+  background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-backward {
+  background: linear-gradient(90deg, var(--gradient-end), var(--gradient-start));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .header h1 {
   font-size: 3rem;
   color: var(--accent);
   margin: 0;
-  background: linear-gradient(90deg, #14b8a6, #06b6d4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .header p {
   color: var(--muted);
   font-size: 1.2rem;
   margin: 16px 0 0;
+  font-weight: 500;
 }
 
 .apps-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fit, 350px);
   gap: 24px;
+}
+
+.app-card.end-of-line {
+  grid-column-end: -1;
+}
+
+.app-card.start-of-line {
+  grid-column-start: 1;
 }
 
 .app-card {

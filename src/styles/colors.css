@@ -1,0 +1,53 @@
+:root {
+  /* App.css colors - dark theme */
+  --bg: #0f172a;
+  --fg: #e5e7eb;
+  --muted: #94a3b8;
+  --card: #111827;
+  --accent: #1ddeec;
+
+  /* HebrewMatcher.css colors - custom color palette */
+  --colour1: rgb(114, 125, 115);
+  --colour2: rgb(170, 185, 154);
+  --colour3: rgb(208, 221, 208);
+  --colour4: rgb(240, 240, 215);
+  --colour5: rgb(143, 225, 160);
+  --colour6: rgb(225, 143, 150);
+
+  /* Semantic color mappings for HebrewMatcher */
+  --colour-selected: var(--colour5);
+  --colour-deselected: var(--colour6);
+  --colour-success: var(--colour5);
+  --colour-error: var(--colour6);
+
+  /* Additional hardcoded colors found in CSS files */
+  --border-primary: #1f2937;
+  --border-secondary: #334155;
+  --border-accent: #374151;
+  --text-light: #cbd5e1;
+  --text-secondary: #64748b;
+  --text-hint: #a5b4fc;
+  --text-small: #9aa3b2;
+
+  /* Background variations */
+  --bg-input: #0b1220;
+  --bg-hover: #4b5563;
+  --bg-secondary: #1f2937;
+  --bg-tertiary: #374151;
+
+  /* Gradient colors */
+  --gradient-start: #14b8a6;
+  --gradient-end: #9916d6;
+
+  /* Shadow colors (with alpha) */
+  --shadow-light: rgba(0, 0, 0, 0.2);
+  --shadow-medium: rgba(0, 0, 0, 0.25);
+  --shadow-heavy: rgba(0, 0, 0, 0.4);
+  --shadow-overlay: rgba(0, 0, 0, 0.75);
+
+  /* Specific component colors */
+  --keyboard-neutral: #374151;
+  --keyboard-neutral-hover: #4b5563;
+  --keyboard-neutral-border: #4b5563;
+  --keyboard-neutral-border-hover: #6b7280;
+}
