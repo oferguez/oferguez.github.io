@@ -45,8 +45,9 @@ export const LandingPage = () => {
   return (
     <div className="container">
       <header className="header">
-        <h1>Web Apps</h1>
-        <p>A collection of useful web applications and tools</p>
+        <h1>Ofer Guez's Apps</h1>
+        <p>Primary school learning games for kids</p>
+        <p>Web Apps for Daddy</p>   
       </header>
 
       <div className="apps-grid">
