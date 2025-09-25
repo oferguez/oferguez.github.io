@@ -16,9 +16,10 @@ A React-based landing page that serves as a centralized hub for various web appl
 - [x] rate calc & matrix with color modes and cell selection
 - [x] rate calc localStorage persistence
 - [x] letter selector count (specify how many times a letter must appear)
-- [ ] letter selector validation
+- [ ] letter selector validation (e.g. there can't be more mandatory letters than pattern length if full word match is checked)
 - [ ] unit tests & CI
 - [ ] refactor monolithic HebrewMatcher
+- [ ] add EnglishMatcher
 
 ## Features
 
