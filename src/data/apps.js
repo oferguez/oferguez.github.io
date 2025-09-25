@@ -46,7 +46,7 @@ export const apps = [
     title: 'Art Gallery',
     description: 'Noa\'s Art gallery',
     tags: [],
-    path: 'https://noaguez.com',
+    path: 'https://www.noaguez.com',
     endOfLine: false // do not set it on the last element 
   },
 
