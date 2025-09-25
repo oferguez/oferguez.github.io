@@ -11,6 +11,8 @@ function RateCalculator() {
   const [matrixRows, setMatrixRows] = useState('10');
   const [matrixCols, setMatrixCols] = useState('10');
   const [matrixMode, setMatrixMode] = useState('number');
+  const [matrixWins, setMatrixWins] = useState(0);
+  const [matrixLosses, setMatrixLosses] = useState(0);
 
   // Load settings from localStorage on component mount
   useEffect(() => {
@@ -186,10 +188,10 @@ function RateCalculator() {
   };
 
   const generateMatrix = () => {
-    if (!isValidNumber(wins) || !isValidNumber(losses)) return [];
-    
-    const baseWins = Number(wins);
-    const baseLosses = Number(losses);
+    if (!isValidNumber(matrixWins) || !isValidNumber(matrixLosses)) return [];
+
+    const baseWins = Number(matrixWins);
+    const baseLosses = Number(matrixLosses);
     const rows = Number(matrixRows);
     const cols = Number(matrixCols);
     
@@ -235,10 +237,8 @@ function RateCalculator() {
   };
 
   const handleCellClick = (cellWins, cellLosses) => {
-    setWins(cellWins.toString());
-    setLosses(cellLosses.toString());
-    setTotal((cellWins + cellLosses).toString());
-    setResult(calculate(cellWins, cellLosses));
+    setMatrixWins(cellWins.toString());
+    setMatrixLosses(cellLosses.toString());
   };
 
   const renderCellContent = (cell) => {
@@ -277,7 +277,11 @@ function RateCalculator() {
           </button>
 
           <button 
-            onClick={result ? () => setShowMatrix(true) : undefined} 
+            onClick={result ? () => {
+              setMatrixWins(Number(wins));
+              setMatrixLosses(Number(losses));
+              setShowMatrix(true);
+            } : undefined} 
             className={`matrix-button ${result ? 'active' : 'inactive'}`}
           >
             📊 View Matrix
@@ -405,7 +409,7 @@ function RateCalculator() {
                   <tr>
                     <th>L\W</th>
                     {Array.from({length: Number(matrixCols)}, (_, i) => (
-                      <th key={i}>{Number(wins) + i}</th>
+                      <th key={i}>{Number(matrixWins) + i}</th>
                     ))}
                   </tr>
                 </thead>
@@ -414,7 +418,7 @@ function RateCalculator() {
                     const matrix = generateMatrix();
                     return matrix.map((row, rowIndex) => (
                       <tr key={rowIndex}>
-                        <th>{Number(losses) + rowIndex}</th>
+                        <th>{Number(matrixLosses) + rowIndex}</th>
                         {row.map((cell, colIndex) => (
                           <td 
                             key={colIndex}
