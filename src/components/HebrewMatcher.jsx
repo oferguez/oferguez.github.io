@@ -439,6 +439,8 @@ export const HebrewMatcher = ({ className }) => {
           <h1>חיפוש מילים לפי תבנית</h1>
           <p className="muted compact">
             השתמש/י ב-<span className="kbd">?</span> לאות כלשהי. דוגמה: <span className="kbd">ר?וא?</span>
+            <br />
+            <span> מספר האותיות יהיה כמספר הסימנים כאשר בוחרים באופציה "מילה שלמה"</span>
           </p>
 
           <div>
@@ -634,7 +636,7 @@ export const HebrewMatcher = ({ className }) => {
                 <div className="hebrew-keyboard">
                   {HEBREW_KEYBOARD.map((row, rowIndex) => (
                     <div key={rowIndex} className="keyboard-row">
-                      {row.keys.map((key, keyIndex) => {
+                      {row.keys.toReversed().map((key, keyIndex) => {
                         const isHebrewLetter = /^[\u05d0-\u05ea]$/.test(key);
                         if (!isHebrewLetter) {
                           return (
