@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 
 const sources = [
-  { id: "common", url: "common_words.txt", name: "Common Words" },
-  { id: "nouns", url: "nouns.txt", name: "Nouns" },
-  { id: "verbs", url: "verbs.txt", name: "Verbs" },
-  { id: "adjectives", url: "adjectives.txt", name: "Adjectives" },
-  { id: "adverbs", url: "adverbs.txt", name: "Adverbs" },
-  { id: "names", url: "names.txt", name: "Names" },
+  { id: "BrEnglish-Legacy", url: "English/International/2of4brif.txt", name: "en-GB legacy" },
+  { id: "BrEnglish-Broader", url: "English/International/3of6all.txt", name: "en-GB broader" },
+  { id: "BrEnglish-Modern", url: "English/International/3of6game.txt", name: "en-GB for games" },
+  { id: "AmEnglish-Base", url: "English/American/2of12.txt", name: "en-US base" },
+  { id: "AmEnglish-Inflected", url: "English/American/2of12inf.txt", name: "en-US word forms" },
+  { id: "Core", url: "English/Special/2of5core.txt", name: "small" },
+  { id: "Neologism", url: "English/Special/neol2016_cleaned.txt", name: "Neologism" },
 ];
 
 const BATCH_SIZE = 10000; // Process wordlists in batches to avoid stack overflow
@@ -81,7 +82,7 @@ async function searchInWordlist(words, pattern, wholeWord, ignoreCase, onProgres
       // Count occurrences of the letter in the word
       const letterCount = (normalizedWord.match(new RegExp(normalizedLetter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), 'g')) || []).length;
 
-      if (letterCount < requiredCount) {
+      if (letterCount !== requiredCount) {
         return false;
       }
     }
@@ -450,7 +451,6 @@ export const EnglishMatcher = ({ className }) => {
             <div className="sources-grid">
               <div className="default-sources">
                 <div className="source-header">
-                  <label>Default Sources</label>
                   <div className="source-actions">
                     <button
                       type="button"
