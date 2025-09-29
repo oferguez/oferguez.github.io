@@ -8,18 +8,23 @@ A React-based landing page that serves as a centralized hub for various web appl
 - [x] are the word lists being hashed locally after first load? and for how long? lifespan
 - [x] find what are the /a/b/c etc suffixes in he_IL
 - [x] Colour Scheme: https://colorhunt.co/palette/727d73aab99ad0ddd0f0f0d7
-- [ ] available sublinks
 - [x] back to main screen link
 - [x] refactor sources selection, so it will generate the check box list of sources automatically
 - [x] in the result also specify from what sources were the words found in 
-- [ ] about dialog w build info etc
 - [x] rate calc & matrix with color modes and cell selection
 - [x] rate calc localStorage persistence
 - [x] letter selector count (specify how many times a letter must appear)
+- [ ] about dialog w build info etc
 - [ ] letter selector validation (e.g. there can't be more mandatory letters than pattern length if full word match is checked)
 - [ ] unit tests & CI
 - [ ] refactor monolithic HebrewMatcher
 - [ ] add EnglishMatcher
+- [ ] optimization?
+- [ ] server side logic (avoiding heavy download of dictionaries)
+
+## Unrelated random
+
+- [ ] available sublinks - how to browse recursively all content available under a url? like ls-R ? 
 
 ## Features
 
