@@ -213,8 +213,8 @@ const QWERTY_KEYBOARD = [
 ];
 
 export const EnglishMatcher = ({ className }) => {
-  const [pattern, setPattern] = useState("c?t");
-  const [selectedSources, setSelectedSources] = useState(["common", "nouns", "verbs", "adjectives"]);
+  const [pattern, setPattern] = useState("l?v?");
+  const [selectedSources, setSelectedSources] = useState(["BrEnglish-Modern"]);
   const [customUrl, setCustomUrl] = useState("");
   const [paste, setPaste] = useState("");
   const [customWordlists, setCustomWordlists] = useState([]);
@@ -420,7 +420,7 @@ export const EnglishMatcher = ({ className }) => {
           </div>
           <h1>English Word Pattern Search</h1>
           <p className="muted compact">
-            Use <span className="kbd">?</span> for any letter. Example: <span className="kbd">c?t</span>
+            Use <span className="kbd">?</span> for any letter. Example: <span className="kbd">l?v?</span>
             <br />
             <span>Number of letters will match pattern when "whole word" is selected</span>
           </p>
@@ -430,7 +430,7 @@ export const EnglishMatcher = ({ className }) => {
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <input
                 id="pattern"
-                placeholder="e.g.: c?t"
+                placeholder="e.g.: l?v?"
                 value={pattern}
                 onChange={(e) => setPattern(e.target.value)}
                 onKeyDown={(e) => {
@@ -438,7 +438,7 @@ export const EnglishMatcher = ({ className }) => {
                     handleSearch();
                   }
                 }}
-                style={{ width: '8ch', minWidth: '12ch' }}
+                style={{ width: '8ch', minWidth: '12ch', borderColor: 'var(--accent)', borderWidth: '4px', borderStyle: 'solid', borderRadius: '8px' }}
               />
               <button onClick={handleSearch} className="btn primary search-btn-dominant">
                 🔍 Search
