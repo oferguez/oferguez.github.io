@@ -28,6 +28,7 @@ A React-based landing page that serves as a centralized hub for various web appl
 - [ ] available sublinks - how to browse recursively all content available under a url? like ls-R ?
 - [ ] add fun sections such as recipe published in guardian/oshavit, social media etc
 - [ ] SEO
+- [ ] Visitors report
 
 ## Features
 
