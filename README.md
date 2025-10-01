@@ -14,14 +14,14 @@ A React-based landing page that serves as a centralized hub for various web appl
 - [x] rate calc & matrix with color modes and cell selection
 - [x] rate calc localStorage persistence
 - [x] letter selector count (specify how many times a letter must appear)
+- [x] add EnglishMatcher
 - [ ] about dialog w build info etc
 - [ ] letter selector validation (e.g. there can't be more mandatory letters than pattern length if full word match is checked)
 - [ ] unit tests & CI
 - [ ] refactor monolithic HebrewMatcher
-- [ ] add EnglishMatcher
-- [ ] optimization?
-- [ ] server side logic (avoiding heavy download of dictionaries)
-
+- [ ] optimization? 
+- [ ] server side logic? (avoiding heavy download of dictionaries)
+- [ ] for PR, a merge strategy that will always override certain files (such as this readme) on publish with content from main
 ## Unrelated random
 
 - [ ] available sublinks - how to browse recursively all content available under a url? like ls-R ? 
@@ -104,9 +104,10 @@ src/
 └── main.jsx              # React app entry point
 ```
 
-## License
+## English Word Lists downloaded from [12dicts](http://wordlist.aspell.net/12dicts/)
 
-## Words List downloaded from:
+## Hebrew Words List downloaded from:
+
 ### adjectives: https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/adjectives.txt
 ### nouns: https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/nouns.txt
 ### verbs: https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/verbs_no_fatverb.txt
