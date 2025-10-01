@@ -24,7 +24,9 @@ A React-based landing page that serves as a centralized hub for various web appl
 - [ ] for PR, a merge strategy that will always override certain files (such as this readme) on publish with content from main
 ## Unrelated random
 
-- [ ] available sublinks - how to browse recursively all content available under a url? like ls-R ? 
+- [ ] available sublinks - how to browse recursively all content available under a url? like ls-R ?
+- [ ] add fun sections such as recipe published in guardian/oshavit, social media etc
+- [ ] SEO
 
 ## Features
 
