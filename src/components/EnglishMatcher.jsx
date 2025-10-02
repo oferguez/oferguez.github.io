@@ -1,4 +1,10 @@
 import React, { useState } from 'react';
+import {
+  buildTemplateRegex,
+  loadWordlist as loadWordlistHelper,
+  searchWordlistBatched,
+  aggregateWordlists,
+} from '../utils/wordMatcher';
 
 const sources = [
   { id: "BrEnglish-Legacy", url: "English/International/2of4brif.txt", name: "en-GB legacy" },
@@ -10,142 +16,72 @@ const sources = [
   { id: "Neologism", url: "English/Special/neol2016_cleaned.txt", name: "Neologism" },
 ];
 
-const BATCH_SIZE = 10000; // Process wordlists in batches to avoid stack overflow
-
 // Helper function to find source by ID
 const getSource = (sourceId) => sources.find(s => s.id === sourceId);
 
 const ENGLISH_LETTERS = /[a-zA-Z]/;
 const ENGLISH_LETTERS_CLASS = "[a-zA-Z]";
 
-function normalizeCase(s, ignoreCase = true) {
-  return ignoreCase ? s.toLowerCase() : s;
-}
+const buildEnglishRegex = buildTemplateRegex({
+  wildcardClass: ENGLISH_LETTERS_CLASS,
+  flags: ({ ignoreCase = true }) => (ignoreCase ? 'ui' : 'u'),
+});
 
-function templateToRegex(template, wholeWord = true, ignoreCase = true) {
-  let out = "";
-  let inClass = false;
-  for (let i = 0; i < template.length; i++) {
-    const ch = template[i];
-    if (ch === "[" && !inClass) { inClass = true; out += ch; continue; }
-    if (ch === "]" && inClass) { inClass = false; out += ch; continue; }
-    if (inClass) { out += ch; continue; }
-    if (ch === "?") { out += ENGLISH_LETTERS_CLASS; continue; }
-    out += ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  }
-  const flags = ignoreCase ? "ui" : "u";
-  return new RegExp((wholeWord ? "^" : "") + out + (wholeWord ? "$" : ""), flags);
-}
+const normalizeCase = (value, ignoreCase = true) => (ignoreCase ? value.toLowerCase() : value);
 
-async function loadWordlist(sourceKey, customUrl, pasted, opts) {
-  let text = "";
-  if (sourceKey === "custom") {
-    if (pasted && pasted.trim().length) {
-      text = pasted;
-    } else if (customUrl && customUrl.trim().length) {
-      const res = await fetch(customUrl.trim(), { cache: "no-store" });
-      if (!res.ok) throw new Error("Failed to load URL: " + res.status);
-      text = await res.text();
-    } else {
-      throw new Error("Select source: URL or manual paste");
-    }
-  } else {
-    const url = getSource(sourceKey).url;
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error("Failed to load default source: " + res.status);
-    text = await res.text();
-  }
+const filterEnglishWord = (word) => !/\s/.test(word) && ENGLISH_LETTERS.test(word);
 
-  let words = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-  words = words.filter(w => !/\s/.test(w) && ENGLISH_LETTERS.test(w));
+const loadEnglishWordlist = (sourceKey, options = {}) => loadWordlistHelper({
+  sourceKey,
+  getSource,
+  customUrl: options.customUrl,
+  pasted: options.pasted,
+  filter: filterEnglishWord,
+});
 
-  return words;
-}
+const searchEnglishWordlist = (words, pattern, opts, onBatchProgress, letterConstraints, sourceName) => searchWordlistBatched({
+  words,
+  pattern,
+  buildRegex: buildEnglishRegex,
+  regexOptions: { wholeWord: opts.wholeWord, ignoreCase: opts.ignoreCase },
+  onBatchProgress,
+  letterConstraints,
+  normalizeForRegex: (word) => word,
+  normalizeForConstraints: (word) => normalizeCase(word, opts.ignoreCase),
+  normalizeLetter: (letter) => normalizeCase(letter, opts.ignoreCase),
+  sourceName,
+});
 
-async function searchInWordlist(words, pattern, wholeWord, ignoreCase, onProgress, letterConstraints = null, sourceName = null) {
-  const rx = templateToRegex(pattern, wholeWord, ignoreCase);
-  const matches = [];
-
-  // Helper function to check letter constraints
-  const passesLetterConstraints = (word) => {
-    if (!letterConstraints) return true;
-
-    const { selected, deselected } = letterConstraints;
-    const normalizedWord = normalizeCase(word, ignoreCase);
-
-    // Check that all selected letters appear with the required count
-    for (const letterInfo of selected) {
-      const letter = typeof letterInfo === 'string' ? letterInfo : letterInfo.letter;
-      const requiredCount = typeof letterInfo === 'string' ? 1 : letterInfo.count;
-      const normalizedLetter = normalizeCase(letter, ignoreCase);
-
-      // Count occurrences of the letter in the word
-      const letterCount = (normalizedWord.match(new RegExp(normalizedLetter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), 'g')) || []).length;
-
-      if (letterCount !== requiredCount) {
-        return false;
-      }
-    }
-
-    // Check that none of the deselected letters appear in the word
-    const normalizedDeselected = deselected.map(l => normalizeCase(l, ignoreCase));
-    for (const letter of normalizedDeselected) {
-      if (normalizedWord.includes(letter)) {
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  if (words.length <= BATCH_SIZE) {
-    // Small wordlist - process all at once
-    return words
-      .filter(w => rx.test(w) && passesLetterConstraints(w))
-      .map(w => ({ word: w, sources: sourceName ? [sourceName] : [] }));
-  }
-
-  // Large wordlist - process in batches
-  const totalBatches = Math.ceil(words.length / BATCH_SIZE);
-  for (let i = 0; i < words.length; i += BATCH_SIZE) {
-    const batch = words.slice(i, i + BATCH_SIZE);
-    const batchMatches = batch
-      .filter(w => rx.test(w) && passesLetterConstraints(w))
-      .map(w => ({ word: w, sources: sourceName ? [sourceName] : [] }));
-    matches.push(...batchMatches);
-
-    if (onProgress) {
-      const currentBatch = Math.floor(i / BATCH_SIZE) + 1;
-      onProgress(currentBatch, totalBatches);
-    }
-
-    // Allow UI to update between batches
-    await new Promise(resolve => setTimeout(resolve, 0));
-  }
-
-  return matches;
-}
+const aggregateMatches = (matches, { unique, ignoreCase }) => aggregateWordlists(matches, {
+  unique,
+  normalizeKey: (word) => (ignoreCase ? word.toLowerCase() : word),
+});
 
 async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts, onSourceStatus, onProgress, letterConstraints = null) {
   const allMatches = [];
   const allWordCounts = { total: 0, matched: 0 };
 
-  // Process each source individually
   for (const sourceKey of sourceKeys) {
+    const source = getSource(sourceKey);
     try {
-      if (onProgress) onProgress(`Loading ${getSource(sourceKey).name}...`);
+      if (onProgress && source) onProgress(`Loading ${source.name}...`);
 
-      const words = await loadWordlist(sourceKey, null, null, opts);
+      const words = await loadEnglishWordlist(sourceKey);
       allWordCounts.total += words.length;
 
-      if (onProgress) onProgress(`Searching in ${getSource(sourceKey).name}...`);
+      if (onProgress && source) onProgress(`Searching in ${source.name}...`);
 
-      const matches = await searchInWordlist(words, pattern, opts.wholeWord, opts.ignoreCase,
+      const matches = await searchEnglishWordlist(
+        words,
+        pattern,
+        opts,
         (currentBatch, totalBatches) => {
-          if (onProgress) onProgress(`Searching in ${getSource(sourceKey).name} (batch ${currentBatch}/${totalBatches})...`);
+          if (onProgress && source) {
+            onProgress(`Searching in ${source.name} (batch ${currentBatch}/${totalBatches})...`);
+          }
         },
         letterConstraints,
-        getSource(sourceKey).name
+        source?.name ?? null
       );
 
       allMatches.push(...matches);
@@ -158,36 +94,35 @@ async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts
     }
   }
 
-  // Process custom wordlists
   for (const customList of customWordlists) {
     if (onProgress) onProgress(`Searching in ${customList.name}...`);
 
-    const matches = await searchInWordlist(customList.words, pattern, opts.wholeWord, opts.ignoreCase, null, letterConstraints, customList.name);
+    const matches = await searchEnglishWordlist(
+      customList.words,
+      pattern,
+      opts,
+      null,
+      letterConstraints,
+      customList.name
+    );
     allMatches.push(...matches);
     allWordCounts.total += customList.words.length;
     allWordCounts.matched += matches.length;
   }
 
-  // Remove duplicates if requested and merge sources
-  let finalMatches = allMatches;
-  if (opts.unique) {
-    if (onProgress) onProgress("Removing duplicates...");
-    const wordMap = new Map();
-    for (const match of allMatches) {
-      const word = opts.ignoreCase ? match.word.toLowerCase() : match.word;
-      if (wordMap.has(word)) {
-        // Merge sources for duplicate words
-        wordMap.get(word).sources.push(...match.sources);
-      } else {
-        wordMap.set(word, { word: match.word, sources: [...match.sources] });
-      }
-    }
-    finalMatches = Array.from(wordMap.values());
-    allWordCounts.matched = finalMatches.length;
+  if (opts.unique && onProgress) {
+    onProgress("Removing duplicates...");
   }
+
+  const { matches: finalMatches, matchedCount } = aggregateMatches(allMatches, {
+    unique: opts.unique,
+    ignoreCase: opts.ignoreCase,
+  });
+  allWordCounts.matched = matchedCount;
 
   return { matches: finalMatches, stats: allWordCounts };
 }
+
 
 function downloadTxt(matches, filename = "matches.txt") {
   const lines = matches.map(match => {

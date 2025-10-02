@@ -59,3 +59,5 @@ coverage/
 
 # Vite
 .vite/
+
+*.patch
