@@ -92,6 +92,18 @@ The project is structured for easy extensibility:
 2. **Update Routing**: Add routes in `src/App.jsx`
 3. **Update Landing Page**: Add app entries to `src/components/LandingPage.jsx`
 
+## Active Feature Branches
+
+While `main` contains the stable landing page, ongoing feature work is published on dedicated branches. The current matcher
+refactor lives on the `feature/shared-word-matcher` branch. Check it out locally with:
+
+```bash
+git fetch
+git checkout feature/shared-word-matcher
+```
+
+See [docs/branching.md](docs/branching.md) for additional guidance on the branching model.
+
 ## Project Structure
 
 ```
