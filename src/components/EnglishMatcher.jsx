@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   buildTemplateRegex,
   loadWordlist as loadWordlistHelper,
@@ -56,6 +56,39 @@ const aggregateMatches = (matches, { unique, ignoreCase }) => aggregateWordlists
   unique,
   normalizeKey: (word) => (ignoreCase ? word.toLowerCase() : word),
 });
+
+const computeEnglishPatternLetterRequirements = (pattern) => {
+  const requirements = {};
+  if (!pattern) {
+    return requirements;
+  }
+
+  const normalized = pattern.toLowerCase();
+  let inClass = false;
+
+  for (let i = 0; i < normalized.length; i++) {
+    const ch = normalized[i];
+    if (ch === '[' && !inClass) {
+      inClass = true;
+      continue;
+    }
+    if (ch === ']' && inClass) {
+      inClass = false;
+      continue;
+    }
+    if (inClass) {
+      continue;
+    }
+    if (ch === '?') {
+      continue;
+    }
+    if (ch >= 'a' && ch <= 'z') {
+      requirements[ch] = (requirements[ch] || 0) + 1;
+    }
+  }
+
+  return requirements;
+};
 
 async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts, onSourceStatus, onProgress, letterConstraints = null) {
   const allMatches = [];
@@ -165,6 +198,74 @@ export const EnglishMatcher = ({ className }) => {
   const [letterStates, setLetterStates] = useState({}); // 'selected', 'deselected', or undefined (grey)
   const [letterCounts, setLetterCounts] = useState({}); // count for selected letters
 
+  const patternLetterRequirements = useMemo(
+    () => computeEnglishPatternLetterRequirements(pattern),
+    [pattern]
+  );
+
+  const getRequiredCountForLetter = (letter) =>
+    patternLetterRequirements[normalizeCase(letter, true)] || 0;
+
+
+  /*
+      pattern | letter requirements        |  unassigned wildcards 
+      --------+----------------------------+-------------------------
+      "aajk??"| { "a": 2, "j": 1, "k": 2 } |  1 
+      "a?b?c?"| { "a": 1, "b": 1, "c": 1 } |  3
+      "???ab" | { "a": 1, "b": 1, "c": 1 } |  2
+  */
+  const getNumberOfUnassignedWildcards = () => {
+    if (!pattern) return 0;
+    let wcards = (pattern.match(/\?/g) || []).length;
+    const selectionCounts = new Map(Object.entries(letterCounts));
+    let patternCounts = {...patternLetterRequirements};
+
+    selectionCounts.forEach((count, ch) => {
+      if (patternCounts[ch]) {
+          if (patternCounts[ch] < count) {
+              wcards -= (count - patternCounts[ch]);
+          } // this is maintained separatly: never get patternCounts[ch] > count
+      } else {
+          wcards -= count;
+      }
+    });
+
+    return wcards;
+  }
+
+  useEffect(() => {
+    setLetterStates((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      Object.entries(prev).forEach(([letter, state]) => {
+        const required = getRequiredCountForLetter(letter);
+        if (state === 'deselected' && required > 0) {
+          delete next[letter];
+          changed = true;
+        }
+      });
+      console.log(`Updating letter states: `, changed, next, prev, patternLetterRequirements);
+      return changed ? next : prev;
+    });
+  }, [patternLetterRequirements]);
+
+  useEffect(() => {
+    setLetterCounts((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      Object.entries(prev).forEach(([letter, count]) => {
+        const required = getRequiredCountForLetter(letter);
+        if (required > 0 && count < required) {
+          next[letter] = required;
+          changed = true;
+          console.log(`Updating count for ${letter} to required ${required}`);
+        }
+      });
+      console.log(`Updating letter counts`, changed, next, prev, patternLetterRequirements, letterStates);
+      return changed ? next : prev;
+    });
+  }, [patternLetterRequirements, letterStates]);
+
   const handleSearch = async () => {
     if (!pattern) {
       alert("Please enter a pattern");
@@ -246,15 +347,14 @@ export const EnglishMatcher = ({ className }) => {
   };
 
   const handleLetterClick = (letter, isRightClick) => {
+    const lowerLetter = letter.toLowerCase();
     setLetterStates(prev => {
-      const current = prev[letter.toLowerCase()];
+      const current = prev[lowerLetter];
       let newState;
 
       if (isRightClick) {
-        // Right click: grey -> red -> grey
         newState = current === 'deselected' ? undefined : 'deselected';
       } else {
-        // Left click cycles: grey -> green -> red -> grey (mobile-friendly)
         if (current === undefined) {
           newState = 'selected';
         } else if (current === 'selected') {
@@ -264,21 +364,48 @@ export const EnglishMatcher = ({ className }) => {
         }
       }
 
+      const requiredCount = getRequiredCountForLetter(lowerLetter);
+      const unassignedWildcardCount = getNumberOfUnassignedWildcards(pattern);
+
+      if (newState === 'selected' && unassignedWildcardCount <= 0) {
+          alert( `pattern not long enough for additional letter election` );
+          newState = undefined;
+      } else if (newState === 'deselected' && requiredCount > 0) {
+        alert(
+          `The pattern already includes "${letter.toUpperCase()}" ${requiredCount} time${
+            requiredCount > 1 ? 's' : ''
+          }. It cannot be marked as forbidden.`
+        );
+        if (!isRightClick && current === 'selected') {
+          newState = undefined;
+        } else {
+          return prev;
+        }
+      }
+
       const newStates = { ...prev };
-      const lowerLetter = letter.toLowerCase();
       if (newState === undefined) {
         delete newStates[lowerLetter];
       } else {
         newStates[lowerLetter] = newState;
       }
 
-      // Initialize count to 1 when letter becomes selected
-      if (newState === 'selected' && !letterCounts[lowerLetter]) {
-        setLetterCounts(prevCounts => ({ ...prevCounts, [lowerLetter]: 1 }));
-      }
-      // Remove count when letter is no longer selected
-      if (newState !== 'selected' && letterCounts[lowerLetter]) {
+      if (newState === 'selected') {
         setLetterCounts(prevCounts => {
+          const currentCount = prevCounts[lowerLetter] ?? 0;
+          const enforcedCount = Math.max(requiredCount, currentCount || 1);
+          if (enforcedCount === currentCount) {
+            return prevCounts;
+          }
+          return { ...prevCounts, [lowerLetter]: enforcedCount };
+        });
+      }
+
+      if (newState !== 'selected') {
+        setLetterCounts(prevCounts => {
+          if (!(lowerLetter in prevCounts)) {
+            return prevCounts;
+          }
           const newCounts = { ...prevCounts };
           delete newCounts[lowerLetter];
           return newCounts;
@@ -290,10 +417,20 @@ export const EnglishMatcher = ({ className }) => {
   };
 
   const handleLetterCountChange = (letter, count) => {
-    const numCount = Math.max(1, parseInt(count) || 1);
+    const lowerLetter = letter.toLowerCase();
+    const numCount = Math.max(1, parseInt(count, 10) || 1);
+    const requiredCount = getRequiredCountForLetter(lowerLetter);
+    const finalCount = Math.max(numCount, requiredCount || 0);
+    if (finalCount !== numCount) {
+      alert(
+        `The pattern already includes "${letter.toUpperCase()}" ${requiredCount} time${
+          requiredCount > 1 ? 's' : ''
+        }, so it cannot be limited to fewer occurrences.`
+      );
+    }
     setLetterCounts(prev => ({
       ...prev,
-      [letter.toLowerCase()]: numCount
+      [lowerLetter]: finalCount
     }));
   };
 
@@ -579,30 +716,36 @@ export const EnglishMatcher = ({ className }) => {
                 {/* Count Controls for Selected Letters */}
                 {(() => {
                   const { selected } = getSelectedDeselectedSummary();
-                  if (selected.length > 0) {
-                    return (
-                      <div className="letter-count-controls">
-                        <h4>Count for each letter:</h4>
-                        <div className="count-inputs">
-                          {selected.map(item => (
-                            <div key={item.letter} className="count-input-group">
-                              <span className="letter-display">{item.letter.toUpperCase()}</span>
-                              <input
-                                type="number"
-                                min="1"
-                                max="10"
-                                value={item.count}
-                                onChange={(e) => handleLetterCountChange(item.letter, e.target.value)}
-                                className="count-input"
-                              />
-                              <span className="count-label">times</span>
-                            </div>
-                          ))}
+                  const hasSelection = selected.length > 0;
+                  return (
+                    <div className={`letter-count-section ${hasSelection ? 'has-selection' : 'empty'}`}>
+                      {hasSelection ? (
+                        <div className="letter-count-controls">
+                          <h4>Count for each letter:</h4>
+                          <div className="count-inputs">
+                            {selected.map(item => (
+                              <div key={item.letter} className="count-input-group">
+                                <span className="letter-display">{item.letter.toUpperCase()}</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="10"
+                                  value={item.count}
+                                  onChange={(e) => handleLetterCountChange(item.letter, e.target.value)}
+                                  className="count-input"
+                                />
+                                <span className="count-label">times</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  }
-                  return null;
+                      ) : (
+                        <div className="letter-count-placeholder">
+                          Select a green letter to control its required occurrences.
+                        </div>
+                      )}
+                    </div>
+                  );
                 })()}
 
                 {(() => {

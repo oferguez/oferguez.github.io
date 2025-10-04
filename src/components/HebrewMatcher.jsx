@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   buildTemplateRegex,
   loadWordlist as loadWordlistHelper,
@@ -91,6 +91,40 @@ const aggregateMatches = (matches, unique) => aggregateWordlists(matches, {
   unique,
   normalizeKey: (word) => normalizeFinalLetters(word),
 });
+
+const computeHebrewPatternLetterRequirements = (pattern) => {
+  const requirements = {};
+  if (!pattern) {
+    return requirements;
+  }
+
+  const normalized = normalizeFinalLetters(pattern);
+  let inClass = false;
+
+  for (let i = 0; i < normalized.length; i++) {
+    const ch = normalized[i];
+    if (ch === '[' && !inClass) {
+      inClass = true;
+      continue;
+    }
+    if (ch === ']' && inClass) {
+      inClass = false;
+      continue;
+    }
+    if (inClass) {
+      continue;
+    }
+    if (ch === '?') {
+      continue;
+    }
+    if (HEBREW_BLOCK.test(ch)) {
+      const normalizedLetter = normalizeFinalLetters(ch);
+      requirements[normalizedLetter] = (requirements[normalizedLetter] || 0) + 1;
+    }
+  }
+
+  return requirements;
+};
 
 async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts, onSourceStatus, onProgress, letterConstraints = null) {
   const allMatches = [];
@@ -197,6 +231,44 @@ export const HebrewMatcher = ({ className }) => {
   const [letterStates, setLetterStates] = useState({}); // 'selected', 'deselected', or undefined (grey)
   const [letterCounts, setLetterCounts] = useState({}); // count for selected letters
 
+  const patternLetterRequirements = useMemo(
+    () => computeHebrewPatternLetterRequirements(pattern),
+    [pattern]
+  );
+
+  const getRequiredCountForLetter = (letter) =>
+    patternLetterRequirements[normalizeFinalLetters(letter)] || 0;
+
+  useEffect(() => {
+    setLetterStates((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      Object.entries(prev).forEach(([letter, state]) => {
+        const required = getRequiredCountForLetter(letter);
+        if (state === 'deselected' && required > 0) {
+          delete next[letter];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [patternLetterRequirements]);
+
+  useEffect(() => {
+    setLetterCounts((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      Object.entries(prev).forEach(([letter, count]) => {
+        const required = getRequiredCountForLetter(letter);
+        if (required > 0 && count < required) {
+          next[letter] = required;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [patternLetterRequirements, letterStates]);
+
   const handleSearch = async () => {
     if (!pattern) {
       alert("נא להזין תבנית");
@@ -281,12 +353,10 @@ export const HebrewMatcher = ({ className }) => {
     setLetterStates(prev => {
       const current = prev[letter];
       let newState;
-      
+
       if (isRightClick) {
-        // Right click: grey -> red -> grey
         newState = current === 'deselected' ? undefined : 'deselected';
       } else {
-        // Left click cycles: grey -> green -> red -> grey (mobile-friendly)
         if (current === undefined) {
           newState = 'selected';
         } else if (current === 'selected') {
@@ -295,36 +365,68 @@ export const HebrewMatcher = ({ className }) => {
           newState = undefined;
         }
       }
-      
+
+      const requiredCount = getRequiredCountForLetter(letter);
+      if (newState === 'deselected' && requiredCount > 0) {
+        alert(
+          `האות "${letter}" כבר מופיעה בתבנית ${
+            requiredCount > 1 ? `${requiredCount} פעמים` : 'פעם אחת'
+          } ולכן אי אפשר לסמן שהיא אסורה.`
+        );
+        if (!isRightClick && current === 'selected') {
+          newState = undefined;
+        } else {
+          return prev;
+        }
+      }
+
       const newStates = { ...prev };
       if (newState === undefined) {
         delete newStates[letter];
       } else {
         newStates[letter] = newState;
       }
-      
-      // Initialize count to 1 when letter becomes selected
-      if (newState === 'selected' && !letterCounts[letter]) {
-        setLetterCounts(prevCounts => ({ ...prevCounts, [letter]: 1 }));
-      }
-      // Remove count when letter is no longer selected
-      if (newState !== 'selected' && letterCounts[letter]) {
+
+      if (newState === 'selected') {
         setLetterCounts(prevCounts => {
+          const currentCount = prevCounts[letter] ?? 0;
+          const enforcedCount = Math.max(requiredCount, currentCount || 1);
+          if (enforcedCount === currentCount) {
+            return prevCounts;
+          }
+          return { ...prevCounts, [letter]: enforcedCount };
+        });
+      }
+
+      if (newState !== 'selected') {
+        setLetterCounts(prevCounts => {
+          if (!(letter in prevCounts)) {
+            return prevCounts;
+          }
           const newCounts = { ...prevCounts };
           delete newCounts[letter];
           return newCounts;
         });
       }
-      
+
       return newStates;
     });
   };
   
   const handleLetterCountChange = (letter, count) => {
-    const numCount = Math.max(1, parseInt(count) || 1);
+    const numCount = Math.max(1, parseInt(count, 10) || 1);
+    const requiredCount = getRequiredCountForLetter(letter);
+    const finalCount = Math.max(numCount, requiredCount || 0);
+    if (finalCount !== numCount) {
+      alert(
+        `האות "${letter}" כבר מופיעה בתבנית ${
+          requiredCount > 1 ? `${requiredCount} פעמים` : 'פעם אחת'
+        } ולכן אי אפשר לבחור פחות הופעות.`
+      );
+    }
     setLetterCounts(prev => ({
       ...prev,
-      [letter]: numCount
+      [letter]: finalCount
     }));
   };
 
@@ -625,30 +727,36 @@ export const HebrewMatcher = ({ className }) => {
                 {/* Count Controls for Selected Letters */}
                 {(() => {
                   const { selected } = getSelectedDeselectedSummary();
-                  if (selected.length > 0) {
-                    return (
-                      <div className="letter-count-controls">
-                        <h4>מספר פעמים לכל אות:</h4>
-                        <div className="count-inputs">
-                          {selected.map(item => (
-                            <div key={item.letter} className="count-input-group">
-                              <span className="letter-display">{item.letter}</span>
-                              <input 
-                                type="number" 
-                                min="1" 
-                                max="10"
-                                value={item.count}
-                                onChange={(e) => handleLetterCountChange(item.letter, e.target.value)}
-                                className="count-input"
-                              />
-                              <span className="count-label">פעמים</span>
-                            </div>
-                          ))}
+                  const hasSelection = selected.length > 0;
+                  return (
+                    <div className={`letter-count-section ${hasSelection ? 'has-selection' : 'empty'}`}>
+                      {hasSelection ? (
+                        <div className="letter-count-controls">
+                          <h4>מספר פעמים לכל אות:</h4>
+                          <div className="count-inputs">
+                            {selected.map(item => (
+                              <div key={item.letter} className="count-input-group">
+                                <span className="letter-display">{item.letter}</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="10"
+                                  value={item.count}
+                                  onChange={(e) => handleLetterCountChange(item.letter, e.target.value)}
+                                  className="count-input"
+                                />
+                                <span className="count-label">פעמים</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  }
-                  return null;
+                      ) : (
+                        <div className="letter-count-placeholder">
+                          בחר/י אות ירוקה כדי להגדיר את מספר ההופעות שלה.
+                        </div>
+                      )}
+                    </div>
+                  );
                 })()}
                 
                 {(() => {

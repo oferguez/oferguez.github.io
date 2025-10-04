@@ -344,13 +344,16 @@ a {
   background: var(--card);
   border: 1px solid var(--border-primary);
   border-radius: 16px;
-  /* padding: 16px; */
   box-shadow: 0 16px 48px var(--shadow-heavy);
   max-width: 95vw;
   max-height: 85vh;
   overflow-y: auto;
   width: 500px;
   min-width: 300px;
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .letter-dialog-header {
@@ -463,15 +466,15 @@ a {
 }
 
 .keyboard-key.deselected {
-  /* background: var(--colour4); */
-  color: white;
+  background: var(--keyboard-deselected-bg);
+  color: var(--colour-deselected);
   border-color: var(--colour-deselected);
   box-shadow: 0 0 8px rgba(180, 82, 83, 0.3);
 }
 
 .keyboard-key.deselected:hover {
-  background: rgb(160, 62, 63);
-  border-color: var(--colour4);
+  background: var(--keyboard-deselected-bg-hover);
+  border-color: var(--colour-deselected);
 }
 
 .letter-summary {
@@ -709,8 +712,22 @@ a {
 }
 
 /* Letter Count Controls */
-.letter-count-controls {
+.letter-count-section {
   margin: 16px 0;
+  min-height: 150px;
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.letter-count-section.empty {
+  align-items: center;
+}
+
+.letter-count-controls {
+  margin: 0;
+  width: 100%;
   padding: 16px;
   background: rgba(114, 125, 115, 0.1);
   border-radius: 8px;
@@ -739,6 +756,18 @@ a {
   padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid var(--colour3);
+}
+
+.letter-count-placeholder {
+  width: 100%;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px dashed var(--colour3);
+  background: rgba(114, 125, 115, 0.08);
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 .letter-display {

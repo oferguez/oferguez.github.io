@@ -15,6 +15,7 @@ A React-based landing page that serves as a centralized hub for various web appl
 - [x] rate calc localStorage persistence
 - [x] letter selector count (specify how many times a letter must appear)
 - [x] add EnglishMatcher
+= [ ] clear up "inClass [ ]" hallucination 
 - [ ] Persist user gui selections
 - [ ] about dialog w build info etc
 - [ ] letter selector validation (e.g. there can't be more mandatory letters than pattern length if full word match is checked)
