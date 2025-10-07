@@ -5,6 +5,7 @@ import {
   searchWordlistBatched,
   aggregateWordlists,
   DEFAULT_BATCH_SIZE,
+  letterSpecificationAlignment,
 } from '../utils/wordMatcher';
 
 const sources = [
@@ -277,6 +278,13 @@ export const HebrewMatcher = ({ className }) => {
 
     if (selectedSources.length === 0 && customWordlists.length === 0 && !paste.trim()) {
       alert("נא לבחור לפחות מקור אחד");
+      return;
+    }
+
+    if (!letterSpecificationAlignment(pattern, letterStates, letterCounts)) {
+      const conflictMessage = 'הגבלות האותיות אינן תואמות לתבנית החיפוש.';
+      setStatus(conflictMessage);
+      alert(conflictMessage);
       return;
     }
 

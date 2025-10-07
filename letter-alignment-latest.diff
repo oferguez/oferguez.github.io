@@ -1,0 +1,144 @@
+From 4576b2634ef326271379f4293c75865370946ffe Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Mon, 6 Oct 2025 12:44:16 +0000
+Subject: [PATCH] Add letter alignment validation before searches
+
+## Summary
+- add a `letterSpecificationAlignment` helper to verify pattern compatibility with letter selections
+- use the helper in the English and Hebrew matchers to stop incompatible searches and show a status message
+
+## Testing
+- not run (not requested)
+---
+ src/components/EnglishMatcher.jsx |  9 +++++++++
+ src/components/HebrewMatcher.jsx  |  8 ++++++++
+ src/utils/wordMatcher.js          | 64 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 81 insertions(+)
+
+diff --git a/src/components/EnglishMatcher.jsx b/src/components/EnglishMatcher.jsx
+index c781e41..3b4c547 100644
+--- a/src/components/EnglishMatcher.jsx
++++ b/src/components/EnglishMatcher.jsx
+@@ -4,6 +4,7 @@ import {
+   loadWordlist as loadWordlistHelper,
+   searchWordlistBatched,
+   aggregateWordlists,
++  letterSpecificationAlignment,
+ } from '../utils/wordMatcher';
+
+ const sources = [
+@@ -176,6 +177,14 @@ export const EnglishMatcher = ({ className }) => {
+       return;
+     }
+
++    const normalizationFn = (ch) => normalizeCase(ch, ignoreCase);
++    if (!letterSpecificationAlignment(pattern, letterStates, letterCounts, '?', normalizationFn)) {
++      const conflictMessage = 'Letter selection requirements conflict with the pattern.';
++      setStatus(conflictMessage);
++      alert(conflictMessage);
++      return;
++    }
++
+     setStatus("Starting search...");
+
+     // Clear previous results and reset state
+diff --git a/src/components/HebrewMatcher.jsx b/src/components/HebrewMatcher.jsx
+index db7ec26..e23079c 100644
+--- a/src/components/HebrewMatcher.jsx
++++ b/src/components/HebrewMatcher.jsx
+@@ -5,6 +5,7 @@ import {
+   searchWordlistBatched,
+   aggregateWordlists,
+   DEFAULT_BATCH_SIZE,
++  letterSpecificationAlignment,
+ } from '../utils/wordMatcher';
+
+ const sources = [
+@@ -208,6 +209,13 @@ export const HebrewMatcher = ({ className }) => {
+       return;
+     }
+
++    if (!letterSpecificationAlignment(pattern, letterStates, letterCounts, '?', normalizeFinalLetters)) {
++      const conflictMessage = 'הגבלות האותיות אינן תואמות לתבנית החיפוש.';
++      setStatus(conflictMessage);
++      alert(conflictMessage);
++      return;
++    }
++
+     setStatus("מתחיל חיפוש...");
+
+     // Clear previous results and reset state
+diff --git a/src/utils/wordMatcher.js b/src/utils/wordMatcher.js
+index 5d60163..61bd78f 100644
+--- a/src/utils/wordMatcher.js
++++ b/src/utils/wordMatcher.js
+@@ -79,6 +79,70 @@ export const loadWordlist = async ({
+   return words;
+ };
+
++export const letterSpecificationAlignment = (
++  pattern,
++  letterStates = {},
++  letterCounts = {},
++  wildcardChar = '?',
++  normalizeLetter = (ch) => ch
++) => {
++  if (!pattern) return true;
++
++  const selectedRequirements = new Map();
++  const deselectedLetters = new Set();
++
++  for (const [letter, state] of Object.entries(letterStates || {})) {
++    if (!state) continue;
++    const normalizedLetter = normalizeLetter(letter);
++    if (!normalizedLetter) continue;
++
++    if (state === 'selected') {
++      const rawCount = letterCounts?.[letter];
++      const parsedCount = Number(rawCount);
++      const count = Number.isFinite(parsedCount) && parsedCount > 0 ? parsedCount : 1;
++      const current = selectedRequirements.get(normalizedLetter) || 0;
++      selectedRequirements.set(normalizedLetter, current + count);
++    } else if (state === 'deselected') {
++      deselectedLetters.add(normalizedLetter);
++    }
++  }
++
++  let wildcardSlots = 0;
++  const literalCounts = new Map();
++
++  for (const ch of pattern) {
++    if (ch === wildcardChar) {
++      wildcardSlots += 1;
++      continue;
++    }
++
++    const normalizedChar = normalizeLetter(ch);
++
++    if (deselectedLetters.has(normalizedChar)) {
++      return false;
++    }
++
++    const current = literalCounts.get(normalizedChar) || 0;
++    literalCounts.set(normalizedChar, current + 1);
++  }
++
++  let requiredWildcards = 0;
++
++  for (const [letter, requiredCount] of selectedRequirements.entries()) {
++    const literalCount = literalCounts.get(letter) || 0;
++    if (requiredCount < literalCount) {
++      return false;
++    }
++
++    requiredWildcards += requiredCount - literalCount;
++    if (requiredWildcards > wildcardSlots) {
++      return false;
++    }
++  }
++
++  return requiredWildcards <= wildcardSlots;
++};
++
+ const createLetterConstraintChecker = (letterConstraints, normalizeWord, normalizeLetter) => {
+   if (!letterConstraints) return () => true;

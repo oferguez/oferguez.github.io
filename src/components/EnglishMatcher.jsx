@@ -4,6 +4,7 @@ import {
   loadWordlist as loadWordlistHelper,
   searchWordlistBatched,
   aggregateWordlists,
+  letterSpecificationAlignment,
 } from '../utils/wordMatcher';
 
 const sources = [
@@ -274,6 +275,13 @@ export const EnglishMatcher = ({ className }) => {
 
     if (selectedSources.length === 0 && customWordlists.length === 0 && !paste.trim()) {
       alert("Please select at least one source");
+      return;
+    }
+
+    if (!letterSpecificationAlignment(pattern, letterStates, letterCounts)) {
+      const conflictMessage = 'Letter selection requirements conflict with the pattern.';
+      setStatus(conflictMessage);
+      alert(conflictMessage);
       return;
     }
 

@@ -79,6 +79,70 @@ export const loadWordlist = async ({
   return words;
 };
 
+export const letterSpecificationAlignment = (
+  pattern,
+  letterStates = {},
+  letterCounts = {}
+) => {
+  if (!pattern) return true;
+
+  const normalize = (value) => (typeof value === 'string' ? value.toLowerCase() : value);
+
+  const selectedRequirements = new Map();
+  const deselectedLetters = new Set();
+
+  for (const [letter, state] of Object.entries(letterStates || {})) {
+    if (!state) continue;
+    const normalizedLetter = normalize(letter);
+    if (!normalizedLetter) continue;
+
+    if (state === 'selected') {
+      const rawCount = letterCounts?.[letter];
+      const parsedCount = Number(rawCount);
+      const count = Number.isFinite(parsedCount) && parsedCount > 0 ? parsedCount : 1;
+      const current = selectedRequirements.get(normalizedLetter) || 0;
+      selectedRequirements.set(normalizedLetter, current + count);
+    } else if (state === 'deselected') {
+      deselectedLetters.add(normalizedLetter);
+    }
+  }
+
+  let wildcardSlots = 0;
+  const literalCounts = new Map();
+
+  for (const ch of pattern) {
+    if (ch === '?') {
+      wildcardSlots += 1;
+      continue;
+    }
+
+    const normalizedChar = normalize(ch);
+
+    if (deselectedLetters.has(normalizedChar)) {
+      return false;
+    }
+
+    const current = literalCounts.get(normalizedChar) || 0;
+    literalCounts.set(normalizedChar, current + 1);
+  }
+
+  let requiredWildcards = 0;
+
+  for (const [letter, requiredCount] of selectedRequirements.entries()) {
+    const literalCount = literalCounts.get(letter) || 0;
+    if (requiredCount < literalCount) {
+      return false;
+    }
+
+    requiredWildcards += requiredCount - literalCount;
+    if (requiredWildcards > wildcardSlots) {
+      return false;
+    }
+  }
+
+  return requiredWildcards <= wildcardSlots;
+};
+
 const createLetterConstraintChecker = (letterConstraints, normalizeWord, normalizeLetter) => {
   if (!letterConstraints) return () => true;
 
