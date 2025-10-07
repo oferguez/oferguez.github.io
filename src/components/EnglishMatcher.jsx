@@ -58,6 +58,7 @@ const aggregateMatches = (matches, { unique, ignoreCase }) => aggregateWordlists
   normalizeKey: (word) => (ignoreCase ? word.toLowerCase() : word),
 });
 
+//todo : retire
 const computeEnglishPatternLetterRequirements = (pattern) => {
   const requirements = {};
   if (!pattern) {
@@ -189,83 +190,45 @@ export const EnglishMatcher = ({ className }) => {
   const [customWordlists, setCustomWordlists] = useState([]);
   const [sourceStatus, setSourceStatus] = useState({});
   const [ignoreCase, setIgnoreCase] = useState(true);
-  const [unique, setUnique] = useState(true);
+  const [unique] = useState(true);
   const [sort, setSort] = useState(true);
   const [wholeWord, setWholeWord] = useState(true);
   const [status, setStatus] = useState("");
   const [matches, setMatches] = useState([]);
   const [stats, setStats] = useState({ total: 0, matched: 0, time: 0 });
   const [showLetterSelector, setShowLetterSelector] = useState(false);
-  const [letterStates, setLetterStates] = useState({}); // 'selected', 'deselected', or undefined (grey)
-  const [letterCounts, setLetterCounts] = useState({}); // count for selected letters
+  const [letterConstraints, setLetterConstraints] = useState({}); // undefined (no constraint), 0 (forbidden), or >= 1 (required count)
 
   const patternLetterRequirements = useMemo(
-    () => computeEnglishPatternLetterRequirements(pattern),
+    () => {
+      console.log("Computing pattern letter requirements for pattern:", pattern);
+      return computeEnglishPatternLetterRequirements(pattern);},
     [pattern]
   );
 
   const getRequiredCountForLetter = (letter) =>
     patternLetterRequirements[normalizeCase(letter, true)] || 0;
 
-
-  /*
-      pattern | letter requirements        |  unassigned wildcards 
-      --------+----------------------------+-------------------------
-      "aajk??"| { "a": 2, "j": 1, "k": 2 } |  1 
-      "a?b?c?"| { "a": 1, "b": 1, "c": 1 } |  3
-      "???ab" | { "a": 1, "b": 1, "c": 1 } |  2
-  */
-  const getNumberOfUnassignedWildcards = () => {
-    if (!pattern) return 0;
-    let wcards = (pattern.match(/\?/g) || []).length;
-    const selectionCounts = new Map(Object.entries(letterCounts));
-    let patternCounts = {...patternLetterRequirements};
-
-    selectionCounts.forEach((count, ch) => {
-      if (patternCounts[ch]) {
-          if (patternCounts[ch] < count) {
-              wcards -= (count - patternCounts[ch]);
-          } // this is maintained separatly: never get patternCounts[ch] > count
-      } else {
-          wcards -= count;
-      }
-    });
-
-    return wcards;
-  }
-
-  useEffect(() => {
-    setLetterStates((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      Object.entries(prev).forEach(([letter, state]) => {
-        const required = getRequiredCountForLetter(letter);
-        if (state === 'deselected' && required > 0) {
-          delete next[letter];
-          changed = true;
-        }
-      });
-      console.log(`Updating letter states: `, changed, next, prev, patternLetterRequirements);
-      return changed ? next : prev;
-    });
-  }, [patternLetterRequirements]);
-
-  useEffect(() => {
-    setLetterCounts((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      Object.entries(prev).forEach(([letter, count]) => {
-        const required = getRequiredCountForLetter(letter);
-        if (required > 0 && count < required) {
-          next[letter] = required;
-          changed = true;
-          console.log(`Updating count for ${letter} to required ${required}`);
-        }
-      });
-      console.log(`Updating letter counts`, changed, next, prev, patternLetterRequirements, letterStates);
-      return changed ? next : prev;
-    });
-  }, [patternLetterRequirements, letterStates]);
+  // useEffect(() => {
+  //   setLetterConstraints((prev) => {
+  //     let changed = false;
+  //     const next = { ...prev };
+  //     Object.entries(prev).forEach(([letter, constraint]) => {
+  //       const required = getRequiredCountForLetter(letter);
+  //       if (constraint === 0 && required > 0) {
+  //         // Can't forbid a letter that's required by pattern
+  //         delete next[letter];
+  //         changed = true;
+  //       } else if (constraint > 0 && required > 0 && constraint < required) {
+  //         // Update count to meet minimum pattern requirement
+  //         next[letter] = required;
+  //         changed = true;
+  //       }
+  //     });
+  //     console.log(`Updating letter constraints:setLetterConstraints `, changed, next, prev, patternLetterRequirements);
+  //     return changed ? next : prev;
+  //   });
+  // }, [patternLetterRequirements]);
 
   const handleSearch = async () => {
     if (!pattern) {
@@ -278,10 +241,10 @@ export const EnglishMatcher = ({ className }) => {
       return;
     }
 
-    if (!letterSpecificationAlignment(pattern, letterStates, letterCounts)) {
-      const conflictMessage = 'Letter selection requirements conflict with the pattern.';
-      setStatus(conflictMessage);
-      alert(conflictMessage);
+    const msg = letterSpecificationAlignment(pattern, letterConstraints);
+    if (msg !== "") {
+      setStatus(msg);
+      alert(msg);
       return;
     }
 
@@ -356,98 +319,71 @@ export const EnglishMatcher = ({ className }) => {
 
   const handleLetterClick = (letter, isRightClick) => {
     const lowerLetter = letter.toLowerCase();
-    setLetterStates(prev => {
+    setLetterConstraints(prev => {
+      console.log("Handling letter click:setLetterConstraints:", letter, isRightClick, prev);
       const current = prev[lowerLetter];
-      let newState;
+      let newConstraint;
 
       if (isRightClick) {
-        newState = current === 'deselected' ? undefined : 'deselected';
+        // Right click: jump to forbidden (0) or clear
+        newConstraint = current === 0 ? undefined : 0;
       } else {
+        // Left click: cycle through undefined -> required(1) -> forbidden(0) -> undefined
         if (current === undefined) {
-          newState = 'selected';
-        } else if (current === 'selected') {
-          newState = 'deselected';
+          const requiredCount = getRequiredCountForLetter(lowerLetter);
+          newConstraint = Math.max(1, requiredCount);
+        } else if (current > 0) {
+          newConstraint = 0; // Move to forbidden
         } else {
-          newState = undefined;
+          newConstraint = undefined; // Clear constraint
         }
       }
 
-      const requiredCount = getRequiredCountForLetter(lowerLetter);
-      const unassignedWildcardCount = getNumberOfUnassignedWildcards(pattern);
-
-      if (newState === 'selected' && unassignedWildcardCount <= 0) {
-          alert( `pattern not long enough for additional letter election` );
-          newState = undefined;
-      } else if (newState === 'deselected' && requiredCount > 0) {
-        alert(
-          `The pattern already includes "${letter.toUpperCase()}" ${requiredCount} time${
-            requiredCount > 1 ? 's' : ''
-          }. It cannot be marked as forbidden.`
-        );
-        if (!isRightClick && current === 'selected') {
-          newState = undefined;
-        } else {
-          return prev;
-        }
-      }
-
-      const newStates = { ...prev };
-      if (newState === undefined) {
-        delete newStates[lowerLetter];
+      const newConstraints = { ...prev };
+      if (newConstraint === undefined) {
+        delete newConstraints[lowerLetter];
       } else {
-        newStates[lowerLetter] = newState;
+        newConstraints[lowerLetter] = newConstraint;
       }
 
-      if (newState === 'selected') {
-        setLetterCounts(prevCounts => {
-          const currentCount = prevCounts[lowerLetter] ?? 0;
-          const enforcedCount = Math.max(requiredCount, currentCount || 1);
-          if (enforcedCount === currentCount) {
-            return prevCounts;
-          }
-          return { ...prevCounts, [lowerLetter]: enforcedCount };
-        });
+      const msg = letterSpecificationAlignment(pattern, newConstraints);
+      if (msg !== "") {
+        setStatus(msg);
+        alert(msg);
+        return prev;
       }
 
-      if (newState !== 'selected') {
-        setLetterCounts(prevCounts => {
-          if (!(lowerLetter in prevCounts)) {
-            return prevCounts;
-          }
-          const newCounts = { ...prevCounts };
-          delete newCounts[lowerLetter];
-          return newCounts;
-        });
-      }
-
-      return newStates;
+      return newConstraints;
     });
   };
 
   const handleLetterCountChange = (letter, count) => {
+    console.log("Handling letter count change:setLetterConstraints:", letter, count);
     const lowerLetter = letter.toLowerCase();
-    const numCount = Math.max(1, parseInt(count, 10) || 1);
-    const requiredCount = getRequiredCountForLetter(lowerLetter);
-    const finalCount = Math.max(numCount, requiredCount || 0);
-    if (finalCount !== numCount) {
-      alert(
-        `The pattern already includes "${letter.toUpperCase()}" ${requiredCount} time${
-          requiredCount > 1 ? 's' : ''
-        }, so it cannot be limited to fewer occurrences.`
-      );
+    const numCount = Math.max(0, parseInt(count, 10) || 0);
+    const nextLetterConstraints = { ...letterConstraints };
+    nextLetterConstraints[lowerLetter] = numCount;
+    if (numCount === 0) {
+      delete nextLetterConstraints[lowerLetter];
     }
-    setLetterCounts(prev => ({
-      ...prev,
-      [lowerLetter]: finalCount
-    }));
+    else {
+      const msg = letterSpecificationAlignment(pattern, nextLetterConstraints);
+      if (msg !== "") {
+        setStatus(msg);
+        alert(msg);
+        return;
+      }
+    }
+
+    setLetterConstraints(() => nextLetterConstraints);
   };
 
   const getSelectedDeselectedSummary = () => {
-    const selected = Object.entries(letterStates)
-      .filter(([, state]) => state === 'selected')
-      .map(([letter]) => ({ letter, count: letterCounts[letter] || 1 }));
-    const deselected = Object.entries(letterStates)
-      .filter(([, state]) => state === 'deselected')
+    const selected = Object.entries(letterConstraints)
+      .filter(([, constraint]) => constraint && constraint > 0)
+      .map(([letter, count]) => ({ letter, count }));
+    const deselected = Object.entries(letterConstraints)
+      .filter(([, constraint]) => constraint === 0)
       .map(([letter]) => letter);
 
     return { selected, deselected };
@@ -512,7 +448,16 @@ export const EnglishMatcher = ({ className }) => {
                 id="pattern"
                 placeholder="e.g.: l?v?"
                 value={pattern}
-                onChange={(e) => setPattern(e.target.value)}
+                onChange={(e) => {
+                  const msg = letterSpecificationAlignment(e.target.value, letterConstraints);
+                  if (msg !== "") {
+                    setStatus(msg);
+                    alert(msg);
+                  }
+                  else {
+                    setPattern(e.target.value);
+                  } 
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleSearch();
@@ -693,10 +638,10 @@ export const EnglishMatcher = ({ className }) => {
                   {QWERTY_KEYBOARD.map((row, rowIndex) => (
                     <div key={rowIndex} className="keyboard-row">
                       {row.keys.map((key, keyIndex) => {
-                        const state = letterStates[key];
+                        const constraint = letterConstraints[key];
                         const className = `keyboard-key ${
-                          state === 'selected' ? 'selected' :
-                          state === 'deselected' ? 'deselected' :
+                          constraint > 0 ? 'selected' :
+                          constraint === 0 ? 'deselected' :
                           'neutral'
                         }`;
 
@@ -736,10 +681,15 @@ export const EnglishMatcher = ({ className }) => {
                                 <span className="letter-display">{item.letter.toUpperCase()}</span>
                                 <input
                                   type="number"
-                                  min="1"
+                                  min="0"
                                   max="10"
                                   value={item.count}
-                                  onChange={(e) => handleLetterCountChange(item.letter, e.target.value)}
+                                  onChange={                                    
+                                    (e) => {
+                                      e.preventDefault();
+                                      handleLetterCountChange(item.letter, e.target.value);
+                                    }
+                                  }
                                   className="count-input"
                                 />
                                 <span className="count-label">times</span>
@@ -778,8 +728,7 @@ export const EnglishMatcher = ({ className }) => {
                 <div className="letter-dialog-actions">
                   <button
                     onClick={() => {
-                      setLetterStates({});
-                      setLetterCounts({});
+                      setLetterConstraints({});
                     }}
                     className="btn"
                   >

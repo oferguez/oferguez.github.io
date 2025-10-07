@@ -79,68 +79,47 @@ export const loadWordlist = async ({
   return words;
 };
 
-export const letterSpecificationAlignment = (
-  pattern,
-  letterStates = {},
-  letterCounts = {}
-) => {
+const computePatternLetterRequirements = (pattern) => {
+  const requirements = {};
+  if (!pattern) {
+    return requirements;
+  }
+
+  const normalized = pattern.toLowerCase();
+
+  for (let i = 0; i < normalized.length; i++) {
+    const ch = normalized[i];
+    if (ch === '?' || (ch >= 'a' && ch <= 'z')) {
+      requirements[ch] = (requirements[ch] || 0) + 1;
+    }
+  }
+
+  return requirements;
+};
+
+
+export const letterSpecificationAlignment = ( pattern, letterStates) => 
+{
   if (!pattern) return true;
 
-  const normalize = (value) => (typeof value === 'string' ? value.toLowerCase() : value);
+  const patternRequirements = computePatternLetterRequirements(pattern);
+  let wcards = patternRequirements['?'] || 0;
 
-  const selectedRequirements = new Map();
-  const deselectedLetters = new Set();
-
-  for (const [letter, state] of Object.entries(letterStates || {})) {
-    if (!state) continue;
-    const normalizedLetter = normalize(letter);
-    if (!normalizedLetter) continue;
-
-    if (state === 'selected') {
-      const rawCount = letterCounts?.[letter];
-      const parsedCount = Number(rawCount);
-      const count = Number.isFinite(parsedCount) && parsedCount > 0 ? parsedCount : 1;
-      const current = selectedRequirements.get(normalizedLetter) || 0;
-      selectedRequirements.set(normalizedLetter, current + count);
-    } else if (state === 'deselected') {
-      deselectedLetters.add(normalizedLetter);
+  for (const [letter, selectionCount] of Object.entries(letterStates || {})) {
+    const patternCount = patternRequirements[letter] || 0;
+    if (selectionCount === 0 && patternCount > 0) {  // letter is forbidden but required by pattern
+      return `Letter "${letter}" is required by the pattern, so can not be deselected`;
+    }
+    const available = patternCount - selectionCount;
+    if (available < 0) {
+      wcards += available; // available is negative
     }
   }
 
-  let wildcardSlots = 0;
-  const literalCounts = new Map();
+  if (wcards >= 0)
+    return "";
 
-  for (const ch of pattern) {
-    if (ch === '?') {
-      wildcardSlots += 1;
-      continue;
-    }
-
-    const normalizedChar = normalize(ch);
-
-    if (deselectedLetters.has(normalizedChar)) {
-      return false;
-    }
-
-    const current = literalCounts.get(normalizedChar) || 0;
-    literalCounts.set(normalizedChar, current + 1);
-  }
-
-  let requiredWildcards = 0;
-
-  for (const [letter, requiredCount] of selectedRequirements.entries()) {
-    const literalCount = literalCounts.get(letter) || 0;
-    if (requiredCount < literalCount) {
-      return false;
-    }
-
-    requiredWildcards += requiredCount - literalCount;
-    if (requiredWildcards > wildcardSlots) {
-      return false;
-    }
-  }
-
-  return requiredWildcards <= wildcardSlots;
+  return "Letter selection requirements conflict with the pattern.";
 };
 
 const createLetterConstraintChecker = (letterConstraints, normalizeWord, normalizeLetter) => {
