@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   buildTemplateRegex,
   loadWordlist as loadWordlistHelper,
@@ -6,6 +6,7 @@ import {
   aggregateWordlists,
   DEFAULT_BATCH_SIZE,
   letterSpecificationAlignment,
+  buildPatternLetterRequirementCalculator,
 } from '../utils/wordMatcher';
 
 const sources = [
@@ -93,39 +94,11 @@ const aggregateMatches = (matches, unique) => aggregateWordlists(matches, {
   normalizeKey: (word) => normalizeFinalLetters(word),
 });
 
-const computeHebrewPatternLetterRequirements = (pattern) => {
-  const requirements = {};
-  if (!pattern) {
-    return requirements;
-  }
-
-  const normalized = normalizeFinalLetters(pattern);
-  let inClass = false;
-
-  for (let i = 0; i < normalized.length; i++) {
-    const ch = normalized[i];
-    if (ch === '[' && !inClass) {
-      inClass = true;
-      continue;
-    }
-    if (ch === ']' && inClass) {
-      inClass = false;
-      continue;
-    }
-    if (inClass) {
-      continue;
-    }
-    if (ch === '?') {
-      continue;
-    }
-    if (HEBREW_BLOCK.test(ch)) {
-      const normalizedLetter = normalizeFinalLetters(ch);
-      requirements[normalizedLetter] = (requirements[normalizedLetter] || 0) + 1;
-    }
-  }
-
-  return requirements;
-};
+const computeHebrewPatternLetterRequirements = buildPatternLetterRequirementCalculator({
+  normalizeTemplate: (pattern = '') => normalizeFinalLetters(pattern),
+  normalizeLetter: (letter) => normalizeFinalLetters(letter),
+  isLetter: (ch) => HEBREW_BLOCK.test(ch),
+});
 
 async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts, onSourceStatus, onProgress, letterConstraints = null) {
   const allMatches = [];
@@ -229,46 +202,28 @@ export const HebrewMatcher = ({ className }) => {
   const [matches, setMatches] = useState([]);
   const [stats, setStats] = useState({ total: 0, matched: 0, time: 0 });
   const [showLetterSelector, setShowLetterSelector] = useState(false);
-  const [letterStates, setLetterStates] = useState({}); // 'selected', 'deselected', or undefined (grey)
-  const [letterCounts, setLetterCounts] = useState({}); // count for selected letters
+  const [letterConstraints, setLetterConstraints] = useState({}); // undefined (no constraint), 0 (forbidden), or >= 1 (required count)
 
   const patternLetterRequirements = useMemo(
     () => computeHebrewPatternLetterRequirements(pattern),
     [pattern]
   );
 
+  const alignmentOptions = useMemo(
+    () => ({
+      computePatternLetterRequirements: computeHebrewPatternLetterRequirements,
+      normalizeLetter: normalizeFinalLetters,
+      formatForbiddenMessage: ({ letter, required }) => {
+        const timesText = required > 1 ? `${required} פעמים` : 'פעם אחת';
+        return `האות "${letter}" כבר מופיעה בתבנית ${timesText} ולכן אי אפשר לסמן שהיא אסורה.`;
+      },
+      formatGeneralConflictMessage: () => 'הגבלות האותיות אינן תואמות לתבנית החיפוש.',
+    }),
+    []
+  );
+
   const getRequiredCountForLetter = (letter) =>
     patternLetterRequirements[normalizeFinalLetters(letter)] || 0;
-
-  useEffect(() => {
-    setLetterStates((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      Object.entries(prev).forEach(([letter, state]) => {
-        const required = getRequiredCountForLetter(letter);
-        if (state === 'deselected' && required > 0) {
-          delete next[letter];
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [patternLetterRequirements]);
-
-  useEffect(() => {
-    setLetterCounts((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      Object.entries(prev).forEach(([letter, count]) => {
-        const required = getRequiredCountForLetter(letter);
-        if (required > 0 && count < required) {
-          next[letter] = required;
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [patternLetterRequirements, letterStates]);
 
   const handleSearch = async () => {
     if (!pattern) {
@@ -281,10 +236,10 @@ export const HebrewMatcher = ({ className }) => {
       return;
     }
 
-    if (!letterSpecificationAlignment(pattern, letterStates, letterCounts)) {
-      const conflictMessage = 'הגבלות האותיות אינן תואמות לתבנית החיפוש.';
-      setStatus(conflictMessage);
-      alert(conflictMessage);
+    const alignmentMessage = letterSpecificationAlignment(pattern, letterConstraints, alignmentOptions);
+    if (alignmentMessage !== '') {
+      setStatus(alignmentMessage);
+      alert(alignmentMessage);
       return;
     }
 
@@ -320,16 +275,18 @@ export const HebrewMatcher = ({ className }) => {
       
       // Prepare letter constraints
       const { selected, deselected } = getSelectedDeselectedSummary();
-      const letterConstraints = (selected.length > 0 || deselected.length > 0) ? { selected, deselected } : null;
-      
+      const letterConstraintsSummary = (selected.length > 0 || deselected.length > 0)
+        ? { selected, deselected }
+        : null;
+
       const { matches: results, stats: searchStats } = await loadAndSearchWordlists(
-        selectedSources, 
-        [...customWordlists, ...customFromPaste], 
+        selectedSources,
+        [...customWordlists, ...customFromPaste],
         pattern,
-        searchOpts, 
+        searchOpts,
         handleSourceStatus,
         handleProgress,
-        letterConstraints
+        letterConstraintsSummary
       );
       
       let finalResults = results;
@@ -358,94 +315,71 @@ export const HebrewMatcher = ({ className }) => {
   };
 
   const handleLetterClick = (letter, isRightClick) => {
-    setLetterStates(prev => {
-      const current = prev[letter];
-      let newState;
+    const normalizedLetter = normalizeFinalLetters(letter);
+    setLetterConstraints(prev => {
+      const current = prev[normalizedLetter];
+      let newConstraint;
 
       if (isRightClick) {
-        newState = current === 'deselected' ? undefined : 'deselected';
+        newConstraint = current === 0 ? undefined : 0;
       } else {
         if (current === undefined) {
-          newState = 'selected';
-        } else if (current === 'selected') {
-          newState = 'deselected';
+          const requiredCount = getRequiredCountForLetter(normalizedLetter);
+          newConstraint = Math.max(1, requiredCount || 1);
+        } else if (current > 0) {
+          newConstraint = 0;
         } else {
-          newState = undefined;
+          newConstraint = undefined;
         }
       }
 
-      const requiredCount = getRequiredCountForLetter(letter);
-      if (newState === 'deselected' && requiredCount > 0) {
-        alert(
-          `האות "${letter}" כבר מופיעה בתבנית ${
-            requiredCount > 1 ? `${requiredCount} פעמים` : 'פעם אחת'
-          } ולכן אי אפשר לסמן שהיא אסורה.`
-        );
-        if (!isRightClick && current === 'selected') {
-          newState = undefined;
-        } else {
-          return prev;
-        }
-      }
-
-      const newStates = { ...prev };
-      if (newState === undefined) {
-        delete newStates[letter];
+      const nextConstraints = { ...prev };
+      if (newConstraint === undefined) {
+        delete nextConstraints[normalizedLetter];
       } else {
-        newStates[letter] = newState;
+        nextConstraints[normalizedLetter] = newConstraint;
       }
 
-      if (newState === 'selected') {
-        setLetterCounts(prevCounts => {
-          const currentCount = prevCounts[letter] ?? 0;
-          const enforcedCount = Math.max(requiredCount, currentCount || 1);
-          if (enforcedCount === currentCount) {
-            return prevCounts;
-          }
-          return { ...prevCounts, [letter]: enforcedCount };
-        });
+      const msg = letterSpecificationAlignment(pattern, nextConstraints, alignmentOptions);
+      if (msg !== '') {
+        setStatus(msg);
+        alert(msg);
+        return prev;
       }
 
-      if (newState !== 'selected') {
-        setLetterCounts(prevCounts => {
-          if (!(letter in prevCounts)) {
-            return prevCounts;
-          }
-          const newCounts = { ...prevCounts };
-          delete newCounts[letter];
-          return newCounts;
-        });
-      }
-
-      return newStates;
+      return nextConstraints;
     });
   };
-  
+
   const handleLetterCountChange = (letter, count) => {
-    const numCount = Math.max(1, parseInt(count, 10) || 1);
-    const requiredCount = getRequiredCountForLetter(letter);
-    const finalCount = Math.max(numCount, requiredCount || 0);
-    if (finalCount !== numCount) {
-      alert(
-        `האות "${letter}" כבר מופיעה בתבנית ${
-          requiredCount > 1 ? `${requiredCount} פעמים` : 'פעם אחת'
-        } ולכן אי אפשר לבחור פחות הופעות.`
-      );
+    const normalizedLetter = normalizeFinalLetters(letter);
+    const numCount = Math.max(0, parseInt(count, 10) || 0);
+    const nextLetterConstraints = { ...letterConstraints };
+
+    if (numCount === 0) {
+      delete nextLetterConstraints[normalizedLetter];
+    } else {
+      nextLetterConstraints[normalizedLetter] = numCount;
     }
-    setLetterCounts(prev => ({
-      ...prev,
-      [letter]: finalCount
-    }));
+
+    const msg = letterSpecificationAlignment(pattern, nextLetterConstraints, alignmentOptions);
+    if (msg !== '') {
+      setStatus(msg);
+      alert(msg);
+      return;
+    }
+
+    setLetterConstraints(nextLetterConstraints);
   };
 
   const getSelectedDeselectedSummary = () => {
-    const selected = Object.entries(letterStates)
-      .filter(([, state]) => state === 'selected')
-      .map(([letter]) => ({ letter, count: letterCounts[letter] || 1 }));
-    const deselected = Object.entries(letterStates)
-      .filter(([, state]) => state === 'deselected')
+    const selected = Object.entries(letterConstraints)
+      .filter(([, constraint]) => constraint && constraint > 0)
+      .map(([letter, count]) => ({ letter, count }));
+    const deselected = Object.entries(letterConstraints)
+      .filter(([, constraint]) => constraint === 0)
       .map(([letter]) => letter);
-    
+
     return { selected, deselected };
   };
 
@@ -504,11 +438,20 @@ export const HebrewMatcher = ({ className }) => {
           <div>
             <label htmlFor="pattern">תבנית לחיפוש</label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input 
-                id="pattern" 
-                placeholder="לדוגמה: ר?וא?" 
+              <input
+                id="pattern"
+                placeholder="לדוגמה: ר?וא?"
                 value={pattern}
-                onChange={(e) => setPattern(e.target.value)}
+                onChange={(e) => {
+                  const newPattern = e.target.value;
+                  const msg = letterSpecificationAlignment(newPattern, letterConstraints, alignmentOptions);
+                  if (msg !== '') {
+                    setStatus(msg);
+                    alert(msg);
+                  } else {
+                    setPattern(newPattern);
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleSearch();
@@ -704,10 +647,11 @@ export const HebrewMatcher = ({ className }) => {
                           );
                         }
                         
-                        const state = letterStates[key];
+                        const normalizedKey = normalizeFinalLetters(key);
+                        const constraint = letterConstraints[normalizedKey];
                         const className = `keyboard-key ${
-                          state === 'selected' ? 'selected' : 
-                          state === 'deselected' ? 'deselected' : 
+                          constraint && constraint > 0 ? 'selected' :
+                          constraint === 0 ? 'deselected' :
                           'neutral'
                         }`;
                         
@@ -747,7 +691,7 @@ export const HebrewMatcher = ({ className }) => {
                                 <span className="letter-display">{item.letter}</span>
                                 <input
                                   type="number"
-                                  min="1"
+                                  min="0"
                                   max="10"
                                   value={item.count}
                                   onChange={(e) => handleLetterCountChange(item.letter, e.target.value)}
@@ -787,10 +731,9 @@ export const HebrewMatcher = ({ className }) => {
                 })()}
                 
                 <div className="letter-dialog-actions">
-                  <button 
+                  <button
                     onClick={() => {
-                      setLetterStates({});
-                      setLetterCounts({});
+                      setLetterConstraints({});
                     }}
                     className="btn"
                   >

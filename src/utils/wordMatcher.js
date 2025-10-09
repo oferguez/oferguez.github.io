@@ -79,47 +79,106 @@ export const loadWordlist = async ({
   return words;
 };
 
-const computePatternLetterRequirements = (pattern) => {
-  const requirements = {};
-  if (!pattern) {
-    return requirements;
-  }
-
-  const normalized = pattern.toLowerCase();
-
-  for (let i = 0; i < normalized.length; i++) {
-    const ch = normalized[i];
-    if (ch === '?' || (ch >= 'a' && ch <= 'z')) {
-      requirements[ch] = (requirements[ch] || 0) + 1;
+export const buildPatternLetterRequirementCalculator = ({
+  normalizeTemplate = (template = '') => template,
+  normalizeLetter = (letter) => letter,
+  isLetter = (ch) => ch >= 'a' && ch <= 'z',
+  wildcardChar = '?',
+} = {}) => {
+  return (pattern) => {
+    const requirements = {};
+    if (!pattern) {
+      return requirements;
     }
-  }
 
-  return requirements;
+    const normalized = normalizeTemplate(pattern);
+    let inClass = false;
+
+    for (let i = 0; i < normalized.length; i++) {
+      const ch = normalized[i];
+
+      if (ch === '[' && !inClass) {
+        inClass = true;
+        continue;
+      }
+      if (ch === ']' && inClass) {
+        inClass = false;
+        continue;
+      }
+      if (inClass) {
+        continue;
+      }
+
+      if (ch === wildcardChar) {
+        requirements[wildcardChar] = (requirements[wildcardChar] || 0) + 1;
+        continue;
+      }
+
+      if (isLetter(ch)) {
+        const normalizedLetter = normalizeLetter(ch);
+        requirements[normalizedLetter] = (requirements[normalizedLetter] || 0) + 1;
+      }
+    }
+
+    return requirements;
+  };
 };
 
+const defaultPatternLetterRequirements = buildPatternLetterRequirementCalculator({
+  normalizeTemplate: (pattern = '') => pattern.toLowerCase(),
+  normalizeLetter: (letter) => letter.toLowerCase(),
+});
 
-export const letterSpecificationAlignment = ( pattern, letterStates) => 
-{
-  if (!pattern) return true;
+const computePatternLetterRequirements = (pattern) =>
+  defaultPatternLetterRequirements(pattern);
 
-  const patternRequirements = computePatternLetterRequirements(pattern);
+
+export const letterSpecificationAlignment = (
+  pattern,
+  letterStates,
+  {
+    computePatternLetterRequirements: computeRequirements = computePatternLetterRequirements,
+    normalizeLetter = (letter) => letter,
+    formatForbiddenMessage = ({ letter }) =>
+      `Letter "${letter}" is required by the pattern, so can not be deselected`,
+    formatGeneralConflictMessage = () =>
+      'Letter selection requirements conflict with the pattern.',
+  } = {}
+) => {
+  if (!pattern) return '';
+
+  const patternRequirements = computeRequirements(pattern);
   let wcards = patternRequirements['?'] || 0;
 
-  for (const [letter, selectionCount] of Object.entries(letterStates || {})) {
-    const patternCount = patternRequirements[letter] || 0;
-    if (selectionCount === 0 && patternCount > 0) {  // letter is forbidden but required by pattern
-      return `Letter "${letter}" is required by the pattern, so can not be deselected`;
+  for (const [rawLetter, selection] of Object.entries(letterStates || {})) {
+    const normalizedLetter = normalizeLetter(rawLetter);
+    const selectionCount = Number(selection);
+
+    if (!Number.isFinite(selectionCount)) {
+      continue;
     }
+
+    const patternCount = patternRequirements[normalizedLetter] || 0;
+    if (selectionCount === 0 && patternCount > 0) {
+      return formatForbiddenMessage({
+        letter: rawLetter,
+        normalizedLetter,
+        required: patternCount,
+      });
+    }
+
     const available = patternCount - selectionCount;
     if (available < 0) {
       wcards += available; // available is negative
     }
   }
 
-  if (wcards >= 0)
-    return "";
+  if (wcards >= 0) return '';
 
-  return "Letter selection requirements conflict with the pattern.";
+  return formatGeneralConflictMessage({
+    patternRequirements,
+    letterStates,
+  });
 };
 
 const createLetterConstraintChecker = (letterConstraints, normalizeWord, normalizeLetter) => {

@@ -5,6 +5,7 @@ import {
   searchWordlistBatched,
   aggregateWordlists,
   letterSpecificationAlignment,
+  buildPatternLetterRequirementCalculator,
 } from '../utils/wordMatcher';
 
 const sources = [
@@ -58,39 +59,14 @@ const aggregateMatches = (matches, { unique, ignoreCase }) => aggregateWordlists
   normalizeKey: (word) => (ignoreCase ? word.toLowerCase() : word),
 });
 
-//todo : retire
-const computeEnglishPatternLetterRequirements = (pattern) => {
-  const requirements = {};
-  if (!pattern) {
-    return requirements;
-  }
-
-  const normalized = pattern.toLowerCase();
-  let inClass = false;
-
-  for (let i = 0; i < normalized.length; i++) {
-    const ch = normalized[i];
-    if (ch === '[' && !inClass) {
-      inClass = true;
-      continue;
-    }
-    if (ch === ']' && inClass) {
-      inClass = false;
-      continue;
-    }
-    if (inClass) {
-      continue;
-    }
-    if (ch === '?') {
-      continue;
-    }
-    if (ch >= 'a' && ch <= 'z') {
-      requirements[ch] = (requirements[ch] || 0) + 1;
-    }
-  }
-
-  return requirements;
-};
+const computeEnglishPatternLetterRequirements = buildPatternLetterRequirementCalculator({
+  normalizeTemplate: (pattern = '') => pattern.toLowerCase(),
+  normalizeLetter: (letter) => letter.toLowerCase(),
+  isLetter: (ch) => {
+    const lower = ch.toLowerCase();
+    return lower >= 'a' && lower <= 'z';
+  },
+});
 
 async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts, onSourceStatus, onProgress, letterConstraints = null) {
   const allMatches = [];
