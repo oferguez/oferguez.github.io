@@ -160,6 +160,8 @@ const QWERTY_KEYBOARD = [
 
 export const EnglishMatcher = ({ className }) => {
   const [pattern, setPattern] = useState("l?v?");
+  const [plRequirements, setPLRequirements] = useState({'l':1, 'v':1, '?':2}); // for initial render
+  const [letterConstraints, setLetterConstraints] = useState({'l':1, 'v':1}); // undefined (no constraint), 0 (forbidden), or >= 1 (required count)
   const [selectedSources, setSelectedSources] = useState(["BrEnglish-Modern"]);
   const [customUrl, setCustomUrl] = useState("");
   const [paste, setPaste] = useState("");
@@ -173,40 +175,22 @@ export const EnglishMatcher = ({ className }) => {
   const [matches, setMatches] = useState([]);
   const [stats, setStats] = useState({ total: 0, matched: 0, time: 0 });
   const [showLetterSelector, setShowLetterSelector] = useState(false);
-  const [letterConstraints, setLetterConstraints] = useState({}); // undefined (no constraint), 0 (forbidden), or >= 1 (required count)
-
-  const patternLetterRequirements = useMemo(
-    () => {
-      console.log("Computing pattern letter requirements for pattern:", pattern);
-      return computeEnglishPatternLetterRequirements(pattern);},
-    [pattern]
-  );
 
   const getRequiredCountForLetter = (letter) =>
-    patternLetterRequirements[normalizeCase(letter, true)] || 0;
+    plRequirements?.counts?.[normalizeCase(letter, true)] || 0;
 
   useEffect(() => {
-    setLetterConstraints((prev) => {
-      let changed = false;
-      const next = { ...prev };
-
-      Object.entries(patternLetterRequirements || {}).forEach(([letter, requiredCount]) => {
-        if (letter === '?' || !Number.isFinite(requiredCount) || requiredCount <= 0) {
-          return;
-        }
-
-        const normalizedLetter = normalizeCase(letter, true);
-        const current = next[normalizedLetter];
-
-        if (current === undefined || current < requiredCount || current === 0) {
-          next[normalizedLetter] = requiredCount;
-          changed = true;
-        }
-      });
-
-      return changed ? next : prev;
-    });
-  }, [patternLetterRequirements]);
+      const plRequirements = computeEnglishPatternLetterRequirements(pattern);
+      setPLRequirements( plRequirements );
+      if (letterSpecificationAlignment(pattern, plRequirements) === "") {
+        const next = Object.fromEntries(Object.entries(plRequirements.counts || {}).filter(([letter]) => letter !== '?'));
+        setLetterConstraints(next);
+      } else {
+        alert("Pattern changed, but existing letter constraints are incompatible. Please XYZ");
+        setLetterConstraints( {} );
+      }
+    }, 
+    [pattern]);
 
   const handleSearch = async () => {
     if (!pattern) {
@@ -298,62 +282,76 @@ export const EnglishMatcher = ({ className }) => {
   const handleLetterClick = (letter, isRightClick) => {
     const lowerLetter = letter.toLowerCase();
     setLetterConstraints(prev => {
-      console.log("Handling letter click:setLetterConstraints:", letter, isRightClick, prev);
       const current = prev[lowerLetter];
-      let newConstraint;
+      let nextConstraint;
 
       if (isRightClick) {
         // Right click: jump to forbidden (0) or clear
-        newConstraint = current === 0 ? undefined : 0;
+        nextConstraint = current === 0 ? undefined : 0;
       } else {
         // Left click: cycle through undefined -> required(1) -> forbidden(0) -> undefined
         if (current === undefined) {
           const requiredCount = getRequiredCountForLetter(lowerLetter);
-          newConstraint = Math.max(1, requiredCount);
+          nextConstraint = Math.max(1, requiredCount);
         } else if (current > 0) {
-          newConstraint = 0; // Move to forbidden
+          nextConstraint = 0; // Move to forbidden
         } else {
-          newConstraint = undefined; // Clear constraint
+          nextConstraint = undefined; // Clear constraint
         }
       }
 
-      const newConstraints = { ...prev };
-      if (newConstraint === undefined) {
-        delete newConstraints[lowerLetter];
-      } else {
-        newConstraints[lowerLetter] = newConstraint;
+      if (nextConstraint === undefined) {
+        if (!Object.prototype.hasOwnProperty.call(prev, lowerLetter)) {
+          return prev;
+        }
+        const { [lowerLetter]: _removed, ...rest } = prev;
+        return rest;
       }
 
-      const msg = letterSpecificationAlignment(pattern, newConstraints);
-      if (msg !== "") {
-        setStatus(msg);
-        alert(msg);
+      if (current === nextConstraint) {
         return prev;
       }
 
-      return newConstraints;
+      return {
+        ...prev,
+        [lowerLetter]: nextConstraint,
+      };
     });
   };
 
   const handleLetterCountChange = (letter, count) => {
-    console.log("Handling letter count change:setLetterConstraints:", letter, count);
     const lowerLetter = letter.toLowerCase();
     const numCount = Math.max(0, parseInt(count, 10) || 0);
-    const nextLetterConstraints = { ...letterConstraints };
-    nextLetterConstraints[lowerLetter] = numCount;
-    if (numCount === 0) {
-      delete nextLetterConstraints[lowerLetter];
-    }
-    else {
-      const msg = letterSpecificationAlignment(pattern, nextLetterConstraints);
-      if (msg !== "") {
-        setStatus(msg);
-        alert(msg);
-        return;
+    setLetterConstraints((prev) => {
+      if (numCount === 0) {
+        if (!Object.prototype.hasOwnProperty.call(prev, lowerLetter)) {
+          return prev;
+        }
+        const { [lowerLetter]: _removed, ...rest } = prev;
+        return rest;
       }
-    }
 
-    setLetterConstraints(() => nextLetterConstraints);
+      if (prev[lowerLetter] === numCount) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [lowerLetter]: numCount,
+      };
+    });
+  };
+
+  const handleLetterSelectorClose = (event) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const msg = letterSpecificationAlignment(pattern, letterConstraints);
+    if (msg !== "") {
+      setStatus(msg);
+      alert(msg);
+      return;
+    }
+    setShowLetterSelector(false);
   };
 
   const getSelectedDeselectedSummary = () => {
@@ -426,16 +424,7 @@ export const EnglishMatcher = ({ className }) => {
                 id="pattern"
                 placeholder="e.g.: l?v?"
                 value={pattern}
-                onChange={(e) => {
-                  const msg = letterSpecificationAlignment(e.target.value, letterConstraints);
-                  if (msg !== "") {
-                    setStatus(msg);
-                    alert(msg);
-                  }
-                  else {
-                    setPattern(e.target.value);
-                  } 
-                }}
+                onChange={(e) => setPattern(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleSearch();
@@ -542,7 +531,7 @@ export const EnglishMatcher = ({ className }) => {
             </div>
           </details>
 
-          <div className="chips-compact">
+          {false && <div className="chips-compact">
             <label className="chip-small">
               <input type="checkbox" checked={ignoreCase} onChange={(e) => setIgnoreCase(e.target.checked)} /> Ignore Case
             </label>
@@ -557,7 +546,7 @@ export const EnglishMatcher = ({ className }) => {
                 {status}
               </label>
             )}
-          </div>
+          </div>}
 
           <div className="secondary-actions">
             <button onClick={() => setShowLetterSelector(true)} className="btn-secondary">Letter Selection</button>
@@ -593,13 +582,13 @@ export const EnglishMatcher = ({ className }) => {
 
           {/* Letter Selector Dialog */}
           {showLetterSelector && (
-            <div className="letter-dialog-overlay" onClick={() => setShowLetterSelector(false)}>
+            <div className="letter-dialog-overlay" onClick={handleLetterSelectorClose}>
               <div className="letter-dialog" onClick={(e) => e.stopPropagation()}>
                 <div className="letter-dialog-header">
                   <h3>Letter Selection</h3>
-                  <button
+                  <button 
                     className="letter-dialog-close"
-                    onClick={() => setShowLetterSelector(false)}
+                    onClick={handleLetterSelectorClose}
                   >
                     ×
                   </button>
@@ -712,8 +701,8 @@ export const EnglishMatcher = ({ className }) => {
                   >
                     Clear All
                   </button>
-                  <button
-                    onClick={() => setShowLetterSelector(false)}
+                  <button 
+                    onClick={handleLetterSelectorClose}
                     className="btn primary"
                   >
                     Close

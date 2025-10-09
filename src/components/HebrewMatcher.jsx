@@ -187,8 +187,12 @@ const HEBREW_KEYBOARD = [
   { row: 2, keys: ["ז", "ס", "ב", "ה", "נ", "מ", "צ", "ת", "ץ"] }
 ];
 
+const HEBREW_DEFAULT_PATTERN = "אהב?";
+const HEBREW_DEFAULT_REQUIREMENTS = computeHebrewPatternLetterRequirements(HEBREW_DEFAULT_PATTERN);
+
 export const HebrewMatcher = ({ className }) => {
-  const [pattern, setPattern] = useState("אהב?");
+  const [pattern, setPattern] = useState(HEBREW_DEFAULT_PATTERN);
+  const [plRequirements, setPLRequirements] = useState(HEBREW_DEFAULT_REQUIREMENTS);
   const [selectedSources, setSelectedSources] = useState(["adjectives", "nouns", "verbs", "he_IL", "names", "settlements", "biblical"]);
   const [customUrl, setCustomUrl] = useState("");
   const [paste, setPaste] = useState("");
@@ -202,12 +206,12 @@ export const HebrewMatcher = ({ className }) => {
   const [matches, setMatches] = useState([]);
   const [stats, setStats] = useState({ total: 0, matched: 0, time: 0 });
   const [showLetterSelector, setShowLetterSelector] = useState(false);
-  const [letterConstraints, setLetterConstraints] = useState({}); // undefined (no constraint), 0 (forbidden), or >= 1 (required count)
-
-  const patternLetterRequirements = useMemo(
-    () => computeHebrewPatternLetterRequirements(pattern),
-    [pattern]
-  );
+  const [letterConstraints, setLetterConstraints] = useState(() => {
+    const counts = HEBREW_DEFAULT_REQUIREMENTS.counts || {};
+    return Object.fromEntries(
+      Object.entries(counts).filter(([letter]) => letter !== '?')
+    );
+  }); // undefined (no constraint), 0 (forbidden), or >= 1 (required count)
 
   const alignmentOptions = useMemo(
     () => ({
@@ -223,30 +227,33 @@ export const HebrewMatcher = ({ className }) => {
   );
 
   const getRequiredCountForLetter = (letter) =>
-    patternLetterRequirements[normalizeFinalLetters(letter)] || 0;
+    plRequirements?.counts?.[normalizeFinalLetters(letter)] || 0;
 
   useEffect(() => {
-    setLetterConstraints((prev) => {
-      let changed = false;
-      const next = { ...prev };
+    const requirements = computeHebrewPatternLetterRequirements(pattern);
+    setPLRequirements(requirements);
 
-      Object.entries(patternLetterRequirements || {}).forEach(([letter, requiredCount]) => {
-        if (letter === '?' || !Number.isFinite(requiredCount) || requiredCount <= 0) {
-          return;
-        }
+    const alignmentMessage = letterSpecificationAlignment(
+      pattern,
+      requirements.counts || {},
+      alignmentOptions
+    );
 
-        const normalizedLetter = normalizeFinalLetters(letter);
-        const current = next[normalizedLetter];
-
-        if (current === undefined || current < requiredCount || current === 0) {
-          next[normalizedLetter] = requiredCount;
-          changed = true;
-        }
+    if (alignmentMessage === '') {
+      const nextConstraints = Object.fromEntries(
+        Object.entries(requirements.counts || {}).filter(([letter]) => letter !== '?')
+      );
+      setLetterConstraints(nextConstraints);
+    } else {
+      const conflictMessage = alignmentOptions.formatGeneralConflictMessage({
+        patternRequirements: requirements.counts,
+        letterStates: requirements.counts,
       });
-
-      return changed ? next : prev;
-    });
-  }, [patternLetterRequirements]);
+      setStatus(conflictMessage);
+      alert(conflictMessage);
+      setLetterConstraints({});
+    }
+  }, [pattern, alignmentOptions]);
 
   const handleSearch = async () => {
     if (!pattern) {
@@ -339,60 +346,76 @@ export const HebrewMatcher = ({ className }) => {
 
   const handleLetterClick = (letter, isRightClick) => {
     const normalizedLetter = normalizeFinalLetters(letter);
-    setLetterConstraints(prev => {
+    setLetterConstraints((prev) => {
       const current = prev[normalizedLetter];
-      let newConstraint;
+      let nextConstraint;
 
       if (isRightClick) {
-        newConstraint = current === 0 ? undefined : 0;
+        nextConstraint = current === 0 ? undefined : 0;
       } else {
         if (current === undefined) {
           const requiredCount = getRequiredCountForLetter(normalizedLetter);
-          newConstraint = Math.max(1, requiredCount || 1);
+          nextConstraint = Math.max(1, requiredCount || 1);
         } else if (current > 0) {
-          newConstraint = 0;
+          nextConstraint = 0;
         } else {
-          newConstraint = undefined;
+          nextConstraint = undefined;
         }
       }
 
-      const nextConstraints = { ...prev };
-      if (newConstraint === undefined) {
-        delete nextConstraints[normalizedLetter];
-      } else {
-        nextConstraints[normalizedLetter] = newConstraint;
+      if (nextConstraint === undefined) {
+        if (!Object.prototype.hasOwnProperty.call(prev, normalizedLetter)) {
+          return prev;
+        }
+        const { [normalizedLetter]: _removed, ...rest } = prev;
+        return rest;
       }
 
-      const msg = letterSpecificationAlignment(pattern, nextConstraints, alignmentOptions);
-      if (msg !== '') {
-        setStatus(msg);
-        alert(msg);
+      if (current === nextConstraint) {
         return prev;
       }
 
-      return nextConstraints;
+      return {
+        ...prev,
+        [normalizedLetter]: nextConstraint,
+      };
     });
   };
 
   const handleLetterCountChange = (letter, count) => {
     const normalizedLetter = normalizeFinalLetters(letter);
     const numCount = Math.max(0, parseInt(count, 10) || 0);
-    const nextLetterConstraints = { ...letterConstraints };
 
-    if (numCount === 0) {
-      delete nextLetterConstraints[normalizedLetter];
-    } else {
-      nextLetterConstraints[normalizedLetter] = numCount;
-    }
+    setLetterConstraints((prev) => {
+      if (numCount === 0) {
+        if (!Object.prototype.hasOwnProperty.call(prev, normalizedLetter)) {
+          return prev;
+        }
+        const { [normalizedLetter]: _removed, ...rest } = prev;
+        return rest;
+      }
 
-    const msg = letterSpecificationAlignment(pattern, nextLetterConstraints, alignmentOptions);
-    if (msg !== '') {
-      setStatus(msg);
-      alert(msg);
+      if (prev[normalizedLetter] === numCount) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [normalizedLetter]: numCount,
+      };
+    });
+  };
+
+  const handleLetterSelectorClose = (event) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const alignmentMessage = letterSpecificationAlignment(pattern, letterConstraints, alignmentOptions);
+    if (alignmentMessage !== '') {
+      setStatus(alignmentMessage);
+      alert(alignmentMessage);
       return;
     }
-
-    setLetterConstraints(nextLetterConstraints);
+    setShowLetterSelector(false);
   };
 
   const getSelectedDeselectedSummary = () => {
@@ -465,16 +488,7 @@ export const HebrewMatcher = ({ className }) => {
                 id="pattern"
                 placeholder="לדוגמה: ר?וא?"
                 value={pattern}
-                onChange={(e) => {
-                  const newPattern = e.target.value;
-                  const msg = letterSpecificationAlignment(newPattern, letterConstraints, alignmentOptions);
-                  if (msg !== '') {
-                    setStatus(msg);
-                    alert(msg);
-                  } else {
-                    setPattern(newPattern);
-                  }
-                }}
+                onChange={(e) => setPattern(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleSearch();
@@ -638,13 +652,13 @@ export const HebrewMatcher = ({ className }) => {
           
           {/* Letter Selector Dialog */}
           {showLetterSelector && (
-            <div className="letter-dialog-overlay" onClick={() => setShowLetterSelector(false)}>
+            <div className="letter-dialog-overlay" onClick={handleLetterSelectorClose}>
               <div className="letter-dialog" onClick={(e) => e.stopPropagation()}>
                 <div className="letter-dialog-header">
                   <h3>בחירת אותיות</h3>
                   <button 
                     className="letter-dialog-close" 
-                    onClick={() => setShowLetterSelector(false)}
+                    onClick={handleLetterSelectorClose}
                   >
                     ×
                   </button>
@@ -763,7 +777,7 @@ export const HebrewMatcher = ({ className }) => {
                     נקה הכל
                   </button>
                   <button 
-                    onClick={() => setShowLetterSelector(false)}
+                    onClick={handleLetterSelectorClose}
                     className="btn primary"
                   >
                     סגור

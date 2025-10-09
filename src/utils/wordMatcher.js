@@ -86,41 +86,64 @@ export const buildPatternLetterRequirementCalculator = ({
   wildcardChar = '?',
 } = {}) => {
   return (pattern) => {
-    const requirements = {};
+    const counts = {};
+    const slots = [];
+
     if (!pattern) {
-      return requirements;
+      return { counts, slots };
     }
 
     const normalized = normalizeTemplate(pattern);
     let inClass = false;
+    let currentSlot = [];
 
     for (let i = 0; i < normalized.length; i++) {
       const ch = normalized[i];
 
-      if (ch === '[' && !inClass) {
+      if (!inClass && ch === '[') {
         inClass = true;
+        currentSlot = [];
         continue;
       }
-      if (ch === ']' && inClass) {
-        inClass = false;
-        continue;
-      }
+
       if (inClass) {
+        if (ch === ']') {
+          inClass = false;
+          if (currentSlot.length > 0) {
+            slots.push(currentSlot);
+          }
+          currentSlot = [];
+          continue;
+        }
+
+        if (isLetter(ch)) {
+          const normalizedLetter = normalizeLetter(ch);
+          if (typeof normalizedLetter === 'string' && normalizedLetter.length > 0) {
+            currentSlot.push(normalizedLetter);
+          }
+        }
+
         continue;
       }
 
       if (ch === wildcardChar) {
-        requirements[wildcardChar] = (requirements[wildcardChar] || 0) + 1;
+        counts[wildcardChar] = (counts[wildcardChar] || 0) + 1;
         continue;
       }
 
       if (isLetter(ch)) {
         const normalizedLetter = normalizeLetter(ch);
-        requirements[normalizedLetter] = (requirements[normalizedLetter] || 0) + 1;
+        if (typeof normalizedLetter === 'string' && normalizedLetter.length > 0) {
+          counts[normalizedLetter] = (counts[normalizedLetter] || 0) + 1;
+        }
       }
     }
 
-    return requirements;
+    if (inClass && currentSlot.length > 0) {
+      slots.push(currentSlot);
+    }
+
+    return { counts, slots };
   };
 };
 
@@ -143,13 +166,21 @@ export const letterSpecificationAlignment = (
       `Letter "${letter}" is required by the pattern, so can not be deselected`,
     formatGeneralConflictMessage = () =>
       'Letter selection requirements conflict with the pattern.',
+    wildcardChar = '?',
   } = {}
 ) => {
   if (!pattern) return '';
 
-  const patternRequirements = computeRequirements(pattern);
-  let wcards = patternRequirements['?'] || 0;
+  const requirements = computeRequirements(pattern) || {};
+  const rawCounts = requirements.counts || requirements || {};
+  let wildcardCount = rawCounts[wildcardChar] || 0;
+  const literalAvailability = { ...rawCounts };
+  if (wildcardChar in literalAvailability) {
+    delete literalAvailability[wildcardChar];
+  }
+  const rawSlots = Array.isArray(requirements.slots) ? requirements.slots : [];
 
+  const normalizedLetterStates = new Map();
   for (const [rawLetter, selection] of Object.entries(letterStates || {})) {
     const normalizedLetter = normalizeLetter(rawLetter);
     const selectionCount = Number(selection);
@@ -158,25 +189,154 @@ export const letterSpecificationAlignment = (
       continue;
     }
 
-    const patternCount = patternRequirements[normalizedLetter] || 0;
-    if (selectionCount === 0 && patternCount > 0) {
-      return formatForbiddenMessage({
-        letter: rawLetter,
-        normalizedLetter,
-        required: patternCount,
-      });
+    if (!normalizedLetter) {
+      continue;
     }
 
-    const available = patternCount - selectionCount;
-    if (available < 0) {
-      wcards += available; // available is negative
+    if (!normalizedLetterStates.has(normalizedLetter)) {
+      normalizedLetterStates.set(normalizedLetter, {
+        raw: rawLetter,
+        count: selectionCount,
+      });
+    } else {
+      // If multiple entries normalize to the same letter, keep the max requirement
+      const existing = normalizedLetterStates.get(normalizedLetter);
+      existing.count = Math.max(existing.count, selectionCount);
     }
   }
 
-  if (wcards >= 0) return '';
+  const forbiddenLetters = new Set();
+  const requiredLetters = new Map();
+
+  for (const [letter, { count }] of normalizedLetterStates.entries()) {
+    if (count <= 0) {
+      forbiddenLetters.add(letter);
+    } else {
+      requiredLetters.set(letter, count);
+    }
+  }
+
+  // Step 0: ensure forbidden letters are not required by literal counts
+  for (const letter of forbiddenLetters) {
+    const requiredByPattern = literalAvailability[letter] || 0;
+    if (requiredByPattern > 0) {
+      const { raw } = normalizedLetterStates.get(letter);
+      return formatForbiddenMessage({
+        letter: raw,
+        normalizedLetter: letter,
+        required: requiredByPattern,
+      });
+    }
+  }
+
+  // Step 0b: filter slots and ensure there is at least one allowed option
+  const slots = rawSlots.map((slot) =>
+    slot
+      .filter((entry) => typeof entry === 'string' && entry.length > 0)
+      .map((entry) => normalizeLetter(entry))
+      .filter((normalized) => normalized && !forbiddenLetters.has(normalized))
+  );
+
+  for (let i = 0; i < slots.length; i++) {
+    if (slots[i].length === 0) {
+      return formatGeneralConflictMessage({
+        patternRequirements: rawCounts,
+        letterStates,
+      });
+    }
+  }
+
+  // Step 1: satisfy requirements using literal counts first
+  const unmetNeeds = new Map();
+  for (const [letter, requiredCount] of requiredLetters.entries()) {
+    const available = literalAvailability[letter] || 0;
+    const satisfied = Math.min(available, requiredCount);
+    literalAvailability[letter] = available - satisfied;
+    const remaining = requiredCount - satisfied;
+    if (remaining > 0) {
+      unmetNeeds.set(letter, remaining);
+    }
+  }
+
+  // Step 2: use slots to cover remaining requirements (maximum bipartite matching)
+  if (unmetNeeds.size > 0 && slots.length > 0) {
+    const slotIndicesByLetter = new Map();
+    for (let i = 0; i < slots.length; i++) {
+      const seen = new Set();
+      for (const letter of slots[i]) {
+        if (seen.has(letter)) continue;
+        seen.add(letter);
+        if (!slotIndicesByLetter.has(letter)) {
+          slotIndicesByLetter.set(letter, []);
+        }
+        slotIndicesByLetter.get(letter).push(i);
+      }
+    }
+
+    const letterNodeLetters = [];
+    unmetNeeds.forEach((count, letter) => {
+      for (let i = 0; i < count; i++) {
+        letterNodeLetters.push(letter);
+      }
+    });
+
+    const slotAssignments = new Array(slots.length).fill(-1);
+
+    const tryMatch = (nodeIndex, visitedSlots) => {
+      const letter = letterNodeLetters[nodeIndex];
+      const candidateSlots = slotIndicesByLetter.get(letter) || [];
+
+      for (const slotIndex of candidateSlots) {
+        if (visitedSlots.has(slotIndex)) continue;
+        visitedSlots.add(slotIndex);
+
+        if (
+          slotAssignments[slotIndex] === -1 ||
+          tryMatch(slotAssignments[slotIndex], visitedSlots)
+        ) {
+          slotAssignments[slotIndex] = nodeIndex;
+          return true;
+        }
+      }
+      return false;
+    };
+
+    let matched = 0;
+    for (let nodeIndex = 0; nodeIndex < letterNodeLetters.length; nodeIndex++) {
+      if (tryMatch(nodeIndex, new Set())) {
+        matched += 1;
+      }
+    }
+
+    if (matched > 0) {
+      const matchedNodes = new Set(slotAssignments.filter((nodeIndex) => nodeIndex !== -1));
+      for (const nodeIndex of matchedNodes) {
+        const letter = letterNodeLetters[nodeIndex];
+        const current = unmetNeeds.get(letter);
+        if (current !== undefined) {
+          const next = current - 1;
+          if (next <= 0) {
+            unmetNeeds.delete(letter);
+          } else {
+            unmetNeeds.set(letter, next);
+          }
+        }
+      }
+    }
+  }
+
+  // Step 3: use wildcards for whatever remains
+  let remainingDemand = 0;
+  unmetNeeds.forEach((count) => {
+    remainingDemand += count;
+  });
+
+  if (remainingDemand <= wildcardCount) {
+    return '';
+  }
 
   return formatGeneralConflictMessage({
-    patternRequirements,
+    patternRequirements: rawCounts,
     letterStates,
   });
 };
@@ -198,7 +358,8 @@ const createLetterConstraintChecker = (letterConstraints, normalizeWord, normali
 
     for (const { letter, count } of normalizedSelected) {
       const matches = normalizedWord.match(new RegExp(escapeRegex(letter), 'g')) || [];
-      if (matches.length !== count) {
+      if (matches.length < count) {
+        console.warn(`Letter constraint not satisfied for ${letter}: expected ${count}, found ${matches.length}`);
         return false;
       }
     }
