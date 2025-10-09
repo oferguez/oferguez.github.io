@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   buildTemplateRegex,
   loadWordlist as loadWordlistHelper,
@@ -224,6 +224,29 @@ export const HebrewMatcher = ({ className }) => {
 
   const getRequiredCountForLetter = (letter) =>
     patternLetterRequirements[normalizeFinalLetters(letter)] || 0;
+
+  useEffect(() => {
+    setLetterConstraints((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      Object.entries(patternLetterRequirements || {}).forEach(([letter, requiredCount]) => {
+        if (letter === '?' || !Number.isFinite(requiredCount) || requiredCount <= 0) {
+          return;
+        }
+
+        const normalizedLetter = normalizeFinalLetters(letter);
+        const current = next[normalizedLetter];
+
+        if (current === undefined || current < requiredCount || current === 0) {
+          next[normalizedLetter] = requiredCount;
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [patternLetterRequirements]);
 
   const handleSearch = async () => {
     if (!pattern) {

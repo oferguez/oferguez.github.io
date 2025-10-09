@@ -185,26 +185,28 @@ export const EnglishMatcher = ({ className }) => {
   const getRequiredCountForLetter = (letter) =>
     patternLetterRequirements[normalizeCase(letter, true)] || 0;
 
-  // useEffect(() => {
-  //   setLetterConstraints((prev) => {
-  //     let changed = false;
-  //     const next = { ...prev };
-  //     Object.entries(prev).forEach(([letter, constraint]) => {
-  //       const required = getRequiredCountForLetter(letter);
-  //       if (constraint === 0 && required > 0) {
-  //         // Can't forbid a letter that's required by pattern
-  //         delete next[letter];
-  //         changed = true;
-  //       } else if (constraint > 0 && required > 0 && constraint < required) {
-  //         // Update count to meet minimum pattern requirement
-  //         next[letter] = required;
-  //         changed = true;
-  //       }
-  //     });
-  //     console.log(`Updating letter constraints:setLetterConstraints `, changed, next, prev, patternLetterRequirements);
-  //     return changed ? next : prev;
-  //   });
-  // }, [patternLetterRequirements]);
+  useEffect(() => {
+    setLetterConstraints((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      Object.entries(patternLetterRequirements || {}).forEach(([letter, requiredCount]) => {
+        if (letter === '?' || !Number.isFinite(requiredCount) || requiredCount <= 0) {
+          return;
+        }
+
+        const normalizedLetter = normalizeCase(letter, true);
+        const current = next[normalizedLetter];
+
+        if (current === undefined || current < requiredCount || current === 0) {
+          next[normalizedLetter] = requiredCount;
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [patternLetterRequirements]);
 
   const handleSearch = async () => {
     if (!pattern) {
