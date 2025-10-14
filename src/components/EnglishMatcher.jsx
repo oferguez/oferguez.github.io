@@ -1,4 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  buildTemplateRegex,
+  loadWordlist as loadWordlistHelper,
+  searchWordlistBatched,
+  aggregateWordlists,
+  letterSpecificationAlignment,
+  buildPatternLetterRequirementCalculator,
+} from '../utils/wordMatcher';
 
 const sources = [
   { id: "BrEnglish-Legacy", url: "English/International/2of4brif.txt", name: "en-GB legacy" },
@@ -10,142 +18,81 @@ const sources = [
   { id: "Neologism", url: "English/Special/neol2016_cleaned.txt", name: "Neologism" },
 ];
 
-const BATCH_SIZE = 10000; // Process wordlists in batches to avoid stack overflow
-
 // Helper function to find source by ID
 const getSource = (sourceId) => sources.find(s => s.id === sourceId);
 
 const ENGLISH_LETTERS = /[a-zA-Z]/;
 const ENGLISH_LETTERS_CLASS = "[a-zA-Z]";
 
-function normalizeCase(s, ignoreCase = true) {
-  return ignoreCase ? s.toLowerCase() : s;
-}
+const buildEnglishRegex = buildTemplateRegex({
+  wildcardClass: ENGLISH_LETTERS_CLASS,
+  flags: ({ ignoreCase = true }) => (ignoreCase ? 'ui' : 'u'),
+});
 
-function templateToRegex(template, wholeWord = true, ignoreCase = true) {
-  let out = "";
-  let inClass = false;
-  for (let i = 0; i < template.length; i++) {
-    const ch = template[i];
-    if (ch === "[" && !inClass) { inClass = true; out += ch; continue; }
-    if (ch === "]" && inClass) { inClass = false; out += ch; continue; }
-    if (inClass) { out += ch; continue; }
-    if (ch === "?") { out += ENGLISH_LETTERS_CLASS; continue; }
-    out += ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  }
-  const flags = ignoreCase ? "ui" : "u";
-  return new RegExp((wholeWord ? "^" : "") + out + (wholeWord ? "$" : ""), flags);
-}
+const normalizeCase = (value, ignoreCase = true) => (ignoreCase ? value.toLowerCase() : value);
 
-async function loadWordlist(sourceKey, customUrl, pasted, opts) {
-  let text = "";
-  if (sourceKey === "custom") {
-    if (pasted && pasted.trim().length) {
-      text = pasted;
-    } else if (customUrl && customUrl.trim().length) {
-      const res = await fetch(customUrl.trim(), { cache: "no-store" });
-      if (!res.ok) throw new Error("Failed to load URL: " + res.status);
-      text = await res.text();
-    } else {
-      throw new Error("Select source: URL or manual paste");
-    }
-  } else {
-    const url = getSource(sourceKey).url;
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error("Failed to load default source: " + res.status);
-    text = await res.text();
-  }
+const filterEnglishWord = (word) => !/\s/.test(word) && ENGLISH_LETTERS.test(word);
 
-  let words = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-  words = words.filter(w => !/\s/.test(w) && ENGLISH_LETTERS.test(w));
+const loadEnglishWordlist = (sourceKey, options = {}) => loadWordlistHelper({
+  sourceKey,
+  getSource,
+  customUrl: options.customUrl,
+  pasted: options.pasted,
+  filter: filterEnglishWord,
+});
 
-  return words;
-}
+const searchEnglishWordlist = (words, pattern, opts, onBatchProgress, letterConstraints, sourceName) => searchWordlistBatched({
+  words,
+  pattern,
+  buildRegex: buildEnglishRegex,
+  regexOptions: { wholeWord: opts.wholeWord, ignoreCase: opts.ignoreCase },
+  onBatchProgress,
+  letterConstraints,
+  normalizeForRegex: (word) => word,
+  normalizeForConstraints: (word) => normalizeCase(word, opts.ignoreCase),
+  normalizeLetter: (letter) => normalizeCase(letter, opts.ignoreCase),
+  sourceName,
+});
 
-async function searchInWordlist(words, pattern, wholeWord, ignoreCase, onProgress, letterConstraints = null, sourceName = null) {
-  const rx = templateToRegex(pattern, wholeWord, ignoreCase);
-  const matches = [];
+const aggregateMatches = (matches, { unique, ignoreCase }) => aggregateWordlists(matches, {
+  unique,
+  normalizeKey: (word) => (ignoreCase ? word.toLowerCase() : word),
+});
 
-  // Helper function to check letter constraints
-  const passesLetterConstraints = (word) => {
-    if (!letterConstraints) return true;
-
-    const { selected, deselected } = letterConstraints;
-    const normalizedWord = normalizeCase(word, ignoreCase);
-
-    // Check that all selected letters appear with the required count
-    for (const letterInfo of selected) {
-      const letter = typeof letterInfo === 'string' ? letterInfo : letterInfo.letter;
-      const requiredCount = typeof letterInfo === 'string' ? 1 : letterInfo.count;
-      const normalizedLetter = normalizeCase(letter, ignoreCase);
-
-      // Count occurrences of the letter in the word
-      const letterCount = (normalizedWord.match(new RegExp(normalizedLetter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), 'g')) || []).length;
-
-      if (letterCount !== requiredCount) {
-        return false;
-      }
-    }
-
-    // Check that none of the deselected letters appear in the word
-    const normalizedDeselected = deselected.map(l => normalizeCase(l, ignoreCase));
-    for (const letter of normalizedDeselected) {
-      if (normalizedWord.includes(letter)) {
-        return false;
-      }
-    }
-
-    return true;
-  };
-
-  if (words.length <= BATCH_SIZE) {
-    // Small wordlist - process all at once
-    return words
-      .filter(w => rx.test(w) && passesLetterConstraints(w))
-      .map(w => ({ word: w, sources: sourceName ? [sourceName] : [] }));
-  }
-
-  // Large wordlist - process in batches
-  const totalBatches = Math.ceil(words.length / BATCH_SIZE);
-  for (let i = 0; i < words.length; i += BATCH_SIZE) {
-    const batch = words.slice(i, i + BATCH_SIZE);
-    const batchMatches = batch
-      .filter(w => rx.test(w) && passesLetterConstraints(w))
-      .map(w => ({ word: w, sources: sourceName ? [sourceName] : [] }));
-    matches.push(...batchMatches);
-
-    if (onProgress) {
-      const currentBatch = Math.floor(i / BATCH_SIZE) + 1;
-      onProgress(currentBatch, totalBatches);
-    }
-
-    // Allow UI to update between batches
-    await new Promise(resolve => setTimeout(resolve, 0));
-  }
-
-  return matches;
-}
+const computeEnglishPatternLetterRequirements = buildPatternLetterRequirementCalculator({
+  normalizeTemplate: (pattern = '') => pattern.toLowerCase(),
+  normalizeLetter: (letter) => letter.toLowerCase(),
+  isLetter: (ch) => {
+    const lower = ch.toLowerCase();
+    return lower >= 'a' && lower <= 'z';
+  },
+});
 
 async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts, onSourceStatus, onProgress, letterConstraints = null) {
   const allMatches = [];
   const allWordCounts = { total: 0, matched: 0 };
 
-  // Process each source individually
   for (const sourceKey of sourceKeys) {
+    const source = getSource(sourceKey);
     try {
-      if (onProgress) onProgress(`Loading ${getSource(sourceKey).name}...`);
+      if (onProgress && source) onProgress(`Loading ${source.name}...`);
 
-      const words = await loadWordlist(sourceKey, null, null, opts);
+      const words = await loadEnglishWordlist(sourceKey);
       allWordCounts.total += words.length;
 
-      if (onProgress) onProgress(`Searching in ${getSource(sourceKey).name}...`);
+      if (onProgress && source) onProgress(`Searching in ${source.name}...`);
 
-      const matches = await searchInWordlist(words, pattern, opts.wholeWord, opts.ignoreCase,
+      const matches = await searchEnglishWordlist(
+        words,
+        pattern,
+        opts,
         (currentBatch, totalBatches) => {
-          if (onProgress) onProgress(`Searching in ${getSource(sourceKey).name} (batch ${currentBatch}/${totalBatches})...`);
+          if (onProgress && source) {
+            onProgress(`Searching in ${source.name} (batch ${currentBatch}/${totalBatches})...`);
+          }
         },
         letterConstraints,
-        getSource(sourceKey).name
+        source?.name ?? null
       );
 
       allMatches.push(...matches);
@@ -158,36 +105,35 @@ async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts
     }
   }
 
-  // Process custom wordlists
   for (const customList of customWordlists) {
     if (onProgress) onProgress(`Searching in ${customList.name}...`);
 
-    const matches = await searchInWordlist(customList.words, pattern, opts.wholeWord, opts.ignoreCase, null, letterConstraints, customList.name);
+    const matches = await searchEnglishWordlist(
+      customList.words,
+      pattern,
+      opts,
+      null,
+      letterConstraints,
+      customList.name
+    );
     allMatches.push(...matches);
     allWordCounts.total += customList.words.length;
     allWordCounts.matched += matches.length;
   }
 
-  // Remove duplicates if requested and merge sources
-  let finalMatches = allMatches;
-  if (opts.unique) {
-    if (onProgress) onProgress("Removing duplicates...");
-    const wordMap = new Map();
-    for (const match of allMatches) {
-      const word = opts.ignoreCase ? match.word.toLowerCase() : match.word;
-      if (wordMap.has(word)) {
-        // Merge sources for duplicate words
-        wordMap.get(word).sources.push(...match.sources);
-      } else {
-        wordMap.set(word, { word: match.word, sources: [...match.sources] });
-      }
-    }
-    finalMatches = Array.from(wordMap.values());
-    allWordCounts.matched = finalMatches.length;
+  if (opts.unique && onProgress) {
+    onProgress("Removing duplicates...");
   }
+
+  const { matches: finalMatches, matchedCount } = aggregateMatches(allMatches, {
+    unique: opts.unique,
+    ignoreCase: opts.ignoreCase,
+  });
+  allWordCounts.matched = matchedCount;
 
   return { matches: finalMatches, stats: allWordCounts };
 }
+
 
 function downloadTxt(matches, filename = "matches.txt") {
   const lines = matches.map(match => {
@@ -214,21 +160,37 @@ const QWERTY_KEYBOARD = [
 
 export const EnglishMatcher = ({ className }) => {
   const [pattern, setPattern] = useState("l?v?");
+  const [plRequirements, setPLRequirements] = useState({'l':1, 'v':1, '?':2}); // for initial render
+  const [letterConstraints, setLetterConstraints] = useState({'l':1, 'v':1}); // undefined (no constraint), 0 (forbidden), or >= 1 (required count)
   const [selectedSources, setSelectedSources] = useState(["BrEnglish-Modern"]);
   const [customUrl, setCustomUrl] = useState("");
   const [paste, setPaste] = useState("");
   const [customWordlists, setCustomWordlists] = useState([]);
   const [sourceStatus, setSourceStatus] = useState({});
   const [ignoreCase, setIgnoreCase] = useState(true);
-  const [unique, setUnique] = useState(true);
+  const [unique] = useState(true);
   const [sort, setSort] = useState(true);
   const [wholeWord, setWholeWord] = useState(true);
   const [status, setStatus] = useState("");
   const [matches, setMatches] = useState([]);
   const [stats, setStats] = useState({ total: 0, matched: 0, time: 0 });
   const [showLetterSelector, setShowLetterSelector] = useState(false);
-  const [letterStates, setLetterStates] = useState({}); // 'selected', 'deselected', or undefined (grey)
-  const [letterCounts, setLetterCounts] = useState({}); // count for selected letters
+
+  const getRequiredCountForLetter = (letter) =>
+    plRequirements?.counts?.[normalizeCase(letter, true)] || 0;
+
+  useEffect(() => {
+      const plRequirements = computeEnglishPatternLetterRequirements(pattern);
+      setPLRequirements( plRequirements );
+      if (letterSpecificationAlignment(pattern, plRequirements) === "") {
+        const next = Object.fromEntries(Object.entries(plRequirements.counts || {}).filter(([letter]) => letter !== '?'));
+        setLetterConstraints(next);
+      } else {
+        alert("Pattern changed, but existing letter constraints are incompatible. Please XYZ");
+        setLetterConstraints( {} );
+      }
+    }, 
+    [pattern]);
 
   const handleSearch = async () => {
     if (!pattern) {
@@ -238,6 +200,13 @@ export const EnglishMatcher = ({ className }) => {
 
     if (selectedSources.length === 0 && customWordlists.length === 0 && !paste.trim()) {
       alert("Please select at least one source");
+      return;
+    }
+
+    const msg = letterSpecificationAlignment(pattern, letterConstraints);
+    if (msg !== "") {
+      setStatus(msg);
+      alert(msg);
       return;
     }
 
@@ -311,63 +280,86 @@ export const EnglishMatcher = ({ className }) => {
   };
 
   const handleLetterClick = (letter, isRightClick) => {
-    setLetterStates(prev => {
-      const current = prev[letter.toLowerCase()];
-      let newState;
+    const lowerLetter = letter.toLowerCase();
+    setLetterConstraints(prev => {
+      const current = prev[lowerLetter];
+      let nextConstraint;
 
       if (isRightClick) {
-        // Right click: grey -> red -> grey
-        newState = current === 'deselected' ? undefined : 'deselected';
+        // Right click: jump to forbidden (0) or clear
+        nextConstraint = current === 0 ? undefined : 0;
       } else {
-        // Left click cycles: grey -> green -> red -> grey (mobile-friendly)
+        // Left click: cycle through undefined -> required(1) -> forbidden(0) -> undefined
         if (current === undefined) {
-          newState = 'selected';
-        } else if (current === 'selected') {
-          newState = 'deselected';
+          const requiredCount = getRequiredCountForLetter(lowerLetter);
+          nextConstraint = Math.max(1, requiredCount);
+        } else if (current > 0) {
+          nextConstraint = 0; // Move to forbidden
         } else {
-          newState = undefined;
+          nextConstraint = undefined; // Clear constraint
         }
       }
 
-      const newStates = { ...prev };
-      const lowerLetter = letter.toLowerCase();
-      if (newState === undefined) {
-        delete newStates[lowerLetter];
-      } else {
-        newStates[lowerLetter] = newState;
+      if (nextConstraint === undefined) {
+        if (!Object.prototype.hasOwnProperty.call(prev, lowerLetter)) {
+          return prev;
+        }
+        const { [lowerLetter]: _removed, ...rest } = prev;
+        return rest;
       }
 
-      // Initialize count to 1 when letter becomes selected
-      if (newState === 'selected' && !letterCounts[lowerLetter]) {
-        setLetterCounts(prevCounts => ({ ...prevCounts, [lowerLetter]: 1 }));
-      }
-      // Remove count when letter is no longer selected
-      if (newState !== 'selected' && letterCounts[lowerLetter]) {
-        setLetterCounts(prevCounts => {
-          const newCounts = { ...prevCounts };
-          delete newCounts[lowerLetter];
-          return newCounts;
-        });
+      if (current === nextConstraint) {
+        return prev;
       }
 
-      return newStates;
+      return {
+        ...prev,
+        [lowerLetter]: nextConstraint,
+      };
     });
   };
 
   const handleLetterCountChange = (letter, count) => {
-    const numCount = Math.max(1, parseInt(count) || 1);
-    setLetterCounts(prev => ({
-      ...prev,
-      [letter.toLowerCase()]: numCount
-    }));
+    const lowerLetter = letter.toLowerCase();
+    const numCount = Math.max(0, parseInt(count, 10) || 0);
+    setLetterConstraints((prev) => {
+      if (numCount === 0) {
+        if (!Object.prototype.hasOwnProperty.call(prev, lowerLetter)) {
+          return prev;
+        }
+        const { [lowerLetter]: _removed, ...rest } = prev;
+        return rest;
+      }
+
+      if (prev[lowerLetter] === numCount) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [lowerLetter]: numCount,
+      };
+    });
+  };
+
+  const handleLetterSelectorClose = (event) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const msg = letterSpecificationAlignment(pattern, letterConstraints);
+    if (msg !== "") {
+      setStatus(msg);
+      alert(msg);
+      return;
+    }
+    setShowLetterSelector(false);
   };
 
   const getSelectedDeselectedSummary = () => {
-    const selected = Object.entries(letterStates)
-      .filter(([, state]) => state === 'selected')
-      .map(([letter]) => ({ letter, count: letterCounts[letter] || 1 }));
-    const deselected = Object.entries(letterStates)
-      .filter(([, state]) => state === 'deselected')
+    const selected = Object.entries(letterConstraints)
+      .filter(([, constraint]) => constraint && constraint > 0)
+      .map(([letter, count]) => ({ letter, count }));
+    const deselected = Object.entries(letterConstraints)
+      .filter(([, constraint]) => constraint === 0)
       .map(([letter]) => letter);
 
     return { selected, deselected };
@@ -539,7 +531,7 @@ export const EnglishMatcher = ({ className }) => {
             </div>
           </details>
 
-          <div className="chips-compact">
+          {false && <div className="chips-compact">
             <label className="chip-small">
               <input type="checkbox" checked={ignoreCase} onChange={(e) => setIgnoreCase(e.target.checked)} /> Ignore Case
             </label>
@@ -554,7 +546,7 @@ export const EnglishMatcher = ({ className }) => {
                 {status}
               </label>
             )}
-          </div>
+          </div>}
 
           <div className="secondary-actions">
             <button onClick={() => setShowLetterSelector(true)} className="btn-secondary">Letter Selection</button>
@@ -590,13 +582,13 @@ export const EnglishMatcher = ({ className }) => {
 
           {/* Letter Selector Dialog */}
           {showLetterSelector && (
-            <div className="letter-dialog-overlay" onClick={() => setShowLetterSelector(false)}>
+            <div className="letter-dialog-overlay" onClick={handleLetterSelectorClose}>
               <div className="letter-dialog" onClick={(e) => e.stopPropagation()}>
                 <div className="letter-dialog-header">
                   <h3>Letter Selection</h3>
-                  <button
+                  <button 
                     className="letter-dialog-close"
-                    onClick={() => setShowLetterSelector(false)}
+                    onClick={handleLetterSelectorClose}
                   >
                     ×
                   </button>
@@ -613,10 +605,10 @@ export const EnglishMatcher = ({ className }) => {
                   {QWERTY_KEYBOARD.map((row, rowIndex) => (
                     <div key={rowIndex} className="keyboard-row">
                       {row.keys.map((key, keyIndex) => {
-                        const state = letterStates[key];
+                        const constraint = letterConstraints[key];
                         const className = `keyboard-key ${
-                          state === 'selected' ? 'selected' :
-                          state === 'deselected' ? 'deselected' :
+                          constraint > 0 ? 'selected' :
+                          constraint === 0 ? 'deselected' :
                           'neutral'
                         }`;
 
@@ -644,30 +636,41 @@ export const EnglishMatcher = ({ className }) => {
                 {/* Count Controls for Selected Letters */}
                 {(() => {
                   const { selected } = getSelectedDeselectedSummary();
-                  if (selected.length > 0) {
-                    return (
-                      <div className="letter-count-controls">
-                        <h4>Count for each letter:</h4>
-                        <div className="count-inputs">
-                          {selected.map(item => (
-                            <div key={item.letter} className="count-input-group">
-                              <span className="letter-display">{item.letter.toUpperCase()}</span>
-                              <input
-                                type="number"
-                                min="1"
-                                max="10"
-                                value={item.count}
-                                onChange={(e) => handleLetterCountChange(item.letter, e.target.value)}
-                                className="count-input"
-                              />
-                              <span className="count-label">times</span>
-                            </div>
-                          ))}
+                  const hasSelection = selected.length > 0;
+                  return (
+                    <div className={`letter-count-section ${hasSelection ? 'has-selection' : 'empty'}`}>
+                      {hasSelection ? (
+                        <div className="letter-count-controls">
+                          <h4>Count for each letter:</h4>
+                          <div className="count-inputs">
+                            {selected.map(item => (
+                              <div key={item.letter} className="count-input-group">
+                                <span className="letter-display">{item.letter.toUpperCase()}</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="10"
+                                  value={item.count}
+                                  onChange={                                    
+                                    (e) => {
+                                      e.preventDefault();
+                                      handleLetterCountChange(item.letter, e.target.value);
+                                    }
+                                  }
+                                  className="count-input"
+                                />
+                                <span className="count-label">times</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  }
-                  return null;
+                      ) : (
+                        <div className="letter-count-placeholder">
+                          Select a green letter to control its required occurrences.
+                        </div>
+                      )}
+                    </div>
+                  );
                 })()}
 
                 {(() => {
@@ -692,15 +695,14 @@ export const EnglishMatcher = ({ className }) => {
                 <div className="letter-dialog-actions">
                   <button
                     onClick={() => {
-                      setLetterStates({});
-                      setLetterCounts({});
+                      setLetterConstraints({});
                     }}
                     className="btn"
                   >
                     Clear All
                   </button>
-                  <button
-                    onClick={() => setShowLetterSelector(false)}
+                  <button 
+                    onClick={handleLetterSelectorClose}
                     className="btn primary"
                   >
                     Close
