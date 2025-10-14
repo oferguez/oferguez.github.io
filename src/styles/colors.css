@@ -50,4 +50,6 @@
   --keyboard-neutral-hover: #4b5563;
   --keyboard-neutral-border: #4b5563;
   --keyboard-neutral-border-hover: #6b7280;
+  --keyboard-deselected-bg: rgba(225, 143, 150, 0.25);
+  --keyboard-deselected-bg-hover: rgba(225, 143, 150, 0.4);
 }

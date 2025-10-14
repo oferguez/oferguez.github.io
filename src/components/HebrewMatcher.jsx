@@ -1,4 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  buildTemplateRegex,
+  loadWordlist as loadWordlistHelper,
+  searchWordlistBatched,
+  aggregateWordlists,
+  DEFAULT_BATCH_SIZE,
+  letterSpecificationAlignment,
+  buildPatternLetterRequirementCalculator,
+} from '../utils/wordMatcher';
 
 const sources = [
   { id: "he_IL", url: "he_IL.dic", name: "מילון מערכת" },
@@ -9,8 +18,6 @@ const sources = [
   { id: "nouns", url: "nouns.txt", name: "שמות עצם" },
   { id: "verbs", url: "verbs_no_fatverb.txt", name: "פעלים" },
 ];
-
-const BATCH_SIZE = 10000; // Process wordlists in batches to avoid stack overflow
 
 // Helper function to find source by ID
 const getSource = (sourceId) => sources.find(s => s.id === sourceId);
@@ -31,182 +38,131 @@ function normalizeFinalLetters(s) {
     .replace(/ץ/g, 'צ');
 }
 
-function templateToRegex(template, wholeWord = true) {
-  const normalizedTemplate = normalizeFinalLetters(template);
-  let out = "";
-  let inClass = false;
-  for (let i = 0; i < normalizedTemplate.length; i++) {
-    const ch = normalizedTemplate[i];
-    if (ch === "[" && !inClass) { inClass = true; out += ch; continue; }
-    if (ch === "]" && inClass) { inClass = false; out += ch; continue; }
-    if (inClass) { out += ch; continue; }
-    if (ch === "?") { out += HEBREW_LETTERS_CLASS; continue; }
-    out += ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const buildHebrewRegex = buildTemplateRegex({
+  wildcardClass: HEBREW_LETTERS_CLASS,
+  normalizeTemplate: (template) => normalizeFinalLetters(template),
+});
+
+const filterHebrewWord = (word) => !/\s/.test(word) && HEBREW_BLOCK.test(word);
+
+const createNiqqudPostprocessor = (shouldStrip) => {
+  if (!shouldStrip) {
+    return undefined;
   }
-  return new RegExp((wholeWord ? "^" : "") + out + (wholeWord ? "$" : ""), "u");
-}
-
-async function loadWordlist(sourceKey, customUrl, pasted, opts) {
-  let text = "";
-  if (sourceKey === "custom") {
-    if (pasted && pasted.trim().length) {
-      text = pasted;
-    } else if (customUrl && customUrl.trim().length) {
-      const res = await fetch(customUrl.trim(), { cache: "no-store" });
-      if (!res.ok) throw new Error("טעינת URL נכשלה: " + res.status);
-      text = await res.text();
-    } else {
-      throw new Error("בחר/י מקור: URL או הדבקה ידנית");
+  return (words) => {
+    const processed = [];
+    for (let i = 0; i < words.length; i += DEFAULT_BATCH_SIZE) {
+      const batch = words.slice(i, i + DEFAULT_BATCH_SIZE);
+      processed.push(...batch.map(stripNiqqud));
     }
-  } else {
-    const url = getSource(sourceKey).url;
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error("טעינת מקור ברירת מחדל נכשלה: " + res.status);
-    text = await res.text();
-  }
-
-  let words = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-  words = words.filter(w => !/\s/.test(w) && HEBREW_BLOCK.test(w));
-
-  if (opts.stripNiqqud) {
-    // Process niqqud removal in batches to avoid stack overflow
-    const processedWords = [];
-    for (let i = 0; i < words.length; i += BATCH_SIZE) {
-      const batch = words.slice(i, i + BATCH_SIZE);
-      processedWords.push(...batch.map(stripNiqqud));
-    }
-    words = processedWords;
-  }
-  return words;
-}
-
-async function searchInWordlist(words, pattern, wholeWord, onProgress, letterConstraints = null, sourceName = null) {
-  const rx = templateToRegex(pattern, wholeWord);
-  const matches = [];
-  
-  
-  // Helper function to check letter constraints
-  const passesLetterConstraints = (word) => {
-    if (!letterConstraints) return true;
-    
-    const { selected, deselected } = letterConstraints;
-    const normalizedWord = normalizeFinalLetters(word);
-    
-    // Check that all selected letters appear with the required count
-    for (const letterInfo of selected) {
-      const letter = typeof letterInfo === 'string' ? letterInfo : letterInfo.letter;
-      const requiredCount = typeof letterInfo === 'string' ? 1 : letterInfo.count;
-      const normalizedLetter = normalizeFinalLetters(letter);
-      
-      // Count occurrences of the letter in the word
-      const letterCount = (normalizedWord.match(new RegExp(normalizedLetter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), 'g')) || []).length;
-      
-      if (letterCount !== requiredCount) {
-        return false;
-      }
-    }
-    
-    // Check that none of the deselected letters appear in the word
-    const normalizedDeselected = deselected.map(normalizeFinalLetters);
-    for (const letter of normalizedDeselected) {
-      if (normalizedWord.includes(letter)) {
-        return false;
-      }
-    }
-    
-    return true;
+    return processed;
   };
-  
-  if (words.length <= BATCH_SIZE) {
-    // Small wordlist - process all at once
-    return words
-      .filter(w => rx.test(normalizeFinalLetters(w)) && passesLetterConstraints(w))
-      .map(w => ({ word: w, sources: sourceName ? [sourceName] : [] }));
-  }
-  
-  // Large wordlist - process in batches
-  const totalBatches = Math.ceil(words.length / BATCH_SIZE);
-  for (let i = 0; i < words.length; i += BATCH_SIZE) {
-    const batch = words.slice(i, i + BATCH_SIZE);
-    const batchMatches = batch
-      .filter(w => rx.test(normalizeFinalLetters(w)) && passesLetterConstraints(w))
-      .map(w => ({ word: w, sources: sourceName ? [sourceName] : [] }));
-    matches.push(...batchMatches);
-    
-    if (onProgress) {
-      const currentBatch = Math.floor(i / BATCH_SIZE) + 1;
-      onProgress(currentBatch, totalBatches);
-    }
-    
-    // Allow UI to update between batches
-    await new Promise(resolve => setTimeout(resolve, 0));
-  }
-  
-  return matches;
-}
+};
+
+const hebrewLoaderMessages = {
+  customSourceRequired: 'בחר/י מקור: URL או הדבקה ידנית',
+  customLoadFailed: 'טעינת URL נכשלה: ',
+  defaultLoadFailed: 'טעינת מקור ברירת מחדל נכשלה: ',
+  unknownSource: 'מקור לא ידוע: ',
+};
+
+const loadHebrewWordlist = (sourceKey, options = {}) => loadWordlistHelper({
+  sourceKey,
+  getSource,
+  customUrl: options.customUrl,
+  pasted: options.pasted,
+  filter: filterHebrewWord,
+  postprocess: createNiqqudPostprocessor(options.stripNiqqud),
+  messages: hebrewLoaderMessages,
+});
+
+const searchHebrewWordlist = (words, pattern, opts, onBatchProgress, letterConstraints, sourceName) => searchWordlistBatched({
+  words,
+  pattern,
+  buildRegex: buildHebrewRegex,
+  regexOptions: { wholeWord: opts.wholeWord },
+  onBatchProgress,
+  letterConstraints,
+  normalizeForRegex: (word) => normalizeFinalLetters(word),
+  normalizeForConstraints: (word) => normalizeFinalLetters(word),
+  normalizeLetter: (letter) => normalizeFinalLetters(letter),
+  sourceName,
+});
+
+const aggregateMatches = (matches, unique) => aggregateWordlists(matches, {
+  unique,
+  normalizeKey: (word) => normalizeFinalLetters(word),
+});
+
+const computeHebrewPatternLetterRequirements = buildPatternLetterRequirementCalculator({
+  normalizeTemplate: (pattern = '') => normalizeFinalLetters(pattern),
+  normalizeLetter: (letter) => normalizeFinalLetters(letter),
+  isLetter: (ch) => HEBREW_BLOCK.test(ch),
+});
 
 async function loadAndSearchWordlists(sourceKeys, customWordlists, pattern, opts, onSourceStatus, onProgress, letterConstraints = null) {
   const allMatches = [];
   const allWordCounts = { total: 0, matched: 0 };
-  
-  // Process each source individually
+
   for (const sourceKey of sourceKeys) {
+    const source = getSource(sourceKey);
     try {
-      if (onProgress) onProgress(`טוען ${getSource(sourceKey).name}...`);
-      
-      const words = await loadWordlist(sourceKey, null, null, opts);
+      if (onProgress && source) onProgress(`טוען ${source.name}...`);
+
+      const words = await loadHebrewWordlist(sourceKey, opts);
       allWordCounts.total += words.length;
-      
-      if (onProgress) onProgress(`מחפש ב-${getSource(sourceKey).name}...`);
-      
-      const matches = await searchInWordlist(words, pattern, opts.wholeWord, 
+
+      if (onProgress && source) onProgress(`מחפש ב-${source.name}...`);
+
+      const matches = await searchHebrewWordlist(
+        words,
+        pattern,
+        opts,
         (currentBatch, totalBatches) => {
-          if (onProgress) onProgress(`מחפש ב-${getSource(sourceKey).name} (חלק ${currentBatch}/${totalBatches})...`);
+          if (onProgress && source) {
+            onProgress(`מחפש ב-${source.name} (חלק ${currentBatch}/${totalBatches})...`);
+          }
         },
         letterConstraints,
-        getSource(sourceKey).name
+        source?.name ?? null
       );
-      
+
       allMatches.push(...matches);
       allWordCounts.matched += matches.length;
-      
+
       if (onSourceStatus) onSourceStatus(sourceKey, 'success', words.length);
     } catch (e) {
       console.warn(`Failed to load ${sourceKey}:`, e);
       if (onSourceStatus) onSourceStatus(sourceKey, 'error', 0, e.message);
     }
   }
-  
-  // Process custom wordlists
+
   for (const customList of customWordlists) {
     if (onProgress) onProgress(`מחפש ב-${customList.name}...`);
-    
-    const matches = await searchInWordlist(customList.words, pattern, opts.wholeWord, null, letterConstraints, customList.name);
+
+    const matches = await searchHebrewWordlist(
+      customList.words,
+      pattern,
+      opts,
+      null,
+      letterConstraints,
+      customList.name
+    );
     allMatches.push(...matches);
     allWordCounts.total += customList.words.length;
     allWordCounts.matched += matches.length;
   }
-  
-  // Remove duplicates if requested and merge sources
-  let finalMatches = allMatches;
-  if (opts.unique) {
-    if (onProgress) onProgress("מסיר כפילויות...");
-    const wordMap = new Map();
-    for (const match of allMatches) {
-      const word = match.word;
-      if (wordMap.has(word)) {
-        // Merge sources for duplicate words
-        wordMap.get(word).sources.push(...match.sources);
-      } else {
-        wordMap.set(word, { word, sources: [...match.sources] });
-      }
-    }
-    finalMatches = Array.from(wordMap.values());
-    allWordCounts.matched = finalMatches.length;
+
+  if (opts.unique && onProgress) {
+    onProgress('מסיר כפילויות...');
   }
-  
+
+  const { matches: finalMatches, matchedCount } = aggregateMatches(allMatches, opts.unique);
+  allWordCounts.matched = matchedCount;
+
   return { matches: finalMatches, stats: allWordCounts };
 }
+
 
 function downloadTxt(matches, filename = "matches.txt") {
   const lines = matches.map(match => {
@@ -231,8 +187,12 @@ const HEBREW_KEYBOARD = [
   { row: 2, keys: ["ז", "ס", "ב", "ה", "נ", "מ", "צ", "ת", "ץ"] }
 ];
 
+const HEBREW_DEFAULT_PATTERN = "אהב?";
+const HEBREW_DEFAULT_REQUIREMENTS = computeHebrewPatternLetterRequirements(HEBREW_DEFAULT_PATTERN);
+
 export const HebrewMatcher = ({ className }) => {
-  const [pattern, setPattern] = useState("אהב?");
+  const [pattern, setPattern] = useState(HEBREW_DEFAULT_PATTERN);
+  const [plRequirements, setPLRequirements] = useState(HEBREW_DEFAULT_REQUIREMENTS);
   const [selectedSources, setSelectedSources] = useState(["adjectives", "nouns", "verbs", "he_IL", "names", "settlements", "biblical"]);
   const [customUrl, setCustomUrl] = useState("");
   const [paste, setPaste] = useState("");
@@ -246,8 +206,54 @@ export const HebrewMatcher = ({ className }) => {
   const [matches, setMatches] = useState([]);
   const [stats, setStats] = useState({ total: 0, matched: 0, time: 0 });
   const [showLetterSelector, setShowLetterSelector] = useState(false);
-  const [letterStates, setLetterStates] = useState({}); // 'selected', 'deselected', or undefined (grey)
-  const [letterCounts, setLetterCounts] = useState({}); // count for selected letters
+  const [letterConstraints, setLetterConstraints] = useState(() => {
+    const counts = HEBREW_DEFAULT_REQUIREMENTS.counts || {};
+    return Object.fromEntries(
+      Object.entries(counts).filter(([letter]) => letter !== '?')
+    );
+  }); // undefined (no constraint), 0 (forbidden), or >= 1 (required count)
+
+  const alignmentOptions = useMemo(
+    () => ({
+      computePatternLetterRequirements: computeHebrewPatternLetterRequirements,
+      normalizeLetter: normalizeFinalLetters,
+      formatForbiddenMessage: ({ letter, required }) => {
+        const timesText = required > 1 ? `${required} פעמים` : 'פעם אחת';
+        return `האות "${letter}" כבר מופיעה בתבנית ${timesText} ולכן אי אפשר לסמן שהיא אסורה.`;
+      },
+      formatGeneralConflictMessage: () => 'הגבלות האותיות אינן תואמות לתבנית החיפוש.',
+    }),
+    []
+  );
+
+  const getRequiredCountForLetter = (letter) =>
+    plRequirements?.counts?.[normalizeFinalLetters(letter)] || 0;
+
+  useEffect(() => {
+    const requirements = computeHebrewPatternLetterRequirements(pattern);
+    setPLRequirements(requirements);
+
+    const alignmentMessage = letterSpecificationAlignment(
+      pattern,
+      requirements.counts || {},
+      alignmentOptions
+    );
+
+    if (alignmentMessage === '') {
+      const nextConstraints = Object.fromEntries(
+        Object.entries(requirements.counts || {}).filter(([letter]) => letter !== '?')
+      );
+      setLetterConstraints(nextConstraints);
+    } else {
+      const conflictMessage = alignmentOptions.formatGeneralConflictMessage({
+        patternRequirements: requirements.counts,
+        letterStates: requirements.counts,
+      });
+      setStatus(conflictMessage);
+      alert(conflictMessage);
+      setLetterConstraints({});
+    }
+  }, [pattern, alignmentOptions]);
 
   const handleSearch = async () => {
     if (!pattern) {
@@ -257,6 +263,13 @@ export const HebrewMatcher = ({ className }) => {
 
     if (selectedSources.length === 0 && customWordlists.length === 0 && !paste.trim()) {
       alert("נא לבחור לפחות מקור אחד");
+      return;
+    }
+
+    const alignmentMessage = letterSpecificationAlignment(pattern, letterConstraints, alignmentOptions);
+    if (alignmentMessage !== '') {
+      setStatus(alignmentMessage);
+      alert(alignmentMessage);
       return;
     }
 
@@ -292,16 +305,18 @@ export const HebrewMatcher = ({ className }) => {
       
       // Prepare letter constraints
       const { selected, deselected } = getSelectedDeselectedSummary();
-      const letterConstraints = (selected.length > 0 || deselected.length > 0) ? { selected, deselected } : null;
-      
+      const letterConstraintsSummary = (selected.length > 0 || deselected.length > 0)
+        ? { selected, deselected }
+        : null;
+
       const { matches: results, stats: searchStats } = await loadAndSearchWordlists(
-        selectedSources, 
-        [...customWordlists, ...customFromPaste], 
+        selectedSources,
+        [...customWordlists, ...customFromPaste],
         pattern,
-        searchOpts, 
+        searchOpts,
         handleSourceStatus,
         handleProgress,
-        letterConstraints
+        letterConstraintsSummary
       );
       
       let finalResults = results;
@@ -330,64 +345,87 @@ export const HebrewMatcher = ({ className }) => {
   };
 
   const handleLetterClick = (letter, isRightClick) => {
-    setLetterStates(prev => {
-      const current = prev[letter];
-      let newState;
-      
+    const normalizedLetter = normalizeFinalLetters(letter);
+    setLetterConstraints((prev) => {
+      const current = prev[normalizedLetter];
+      let nextConstraint;
+
       if (isRightClick) {
-        // Right click: grey -> red -> grey
-        newState = current === 'deselected' ? undefined : 'deselected';
+        nextConstraint = current === 0 ? undefined : 0;
       } else {
-        // Left click cycles: grey -> green -> red -> grey (mobile-friendly)
         if (current === undefined) {
-          newState = 'selected';
-        } else if (current === 'selected') {
-          newState = 'deselected';
+          const requiredCount = getRequiredCountForLetter(normalizedLetter);
+          nextConstraint = Math.max(1, requiredCount || 1);
+        } else if (current > 0) {
+          nextConstraint = 0;
         } else {
-          newState = undefined;
+          nextConstraint = undefined;
         }
       }
-      
-      const newStates = { ...prev };
-      if (newState === undefined) {
-        delete newStates[letter];
-      } else {
-        newStates[letter] = newState;
+
+      if (nextConstraint === undefined) {
+        if (!Object.prototype.hasOwnProperty.call(prev, normalizedLetter)) {
+          return prev;
+        }
+        const { [normalizedLetter]: _removed, ...rest } = prev;
+        return rest;
       }
-      
-      // Initialize count to 1 when letter becomes selected
-      if (newState === 'selected' && !letterCounts[letter]) {
-        setLetterCounts(prevCounts => ({ ...prevCounts, [letter]: 1 }));
+
+      if (current === nextConstraint) {
+        return prev;
       }
-      // Remove count when letter is no longer selected
-      if (newState !== 'selected' && letterCounts[letter]) {
-        setLetterCounts(prevCounts => {
-          const newCounts = { ...prevCounts };
-          delete newCounts[letter];
-          return newCounts;
-        });
-      }
-      
-      return newStates;
+
+      return {
+        ...prev,
+        [normalizedLetter]: nextConstraint,
+      };
     });
   };
-  
+
   const handleLetterCountChange = (letter, count) => {
-    const numCount = Math.max(1, parseInt(count) || 1);
-    setLetterCounts(prev => ({
-      ...prev,
-      [letter]: numCount
-    }));
+    const normalizedLetter = normalizeFinalLetters(letter);
+    const numCount = Math.max(0, parseInt(count, 10) || 0);
+
+    setLetterConstraints((prev) => {
+      if (numCount === 0) {
+        if (!Object.prototype.hasOwnProperty.call(prev, normalizedLetter)) {
+          return prev;
+        }
+        const { [normalizedLetter]: _removed, ...rest } = prev;
+        return rest;
+      }
+
+      if (prev[normalizedLetter] === numCount) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [normalizedLetter]: numCount,
+      };
+    });
+  };
+
+  const handleLetterSelectorClose = (event) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const alignmentMessage = letterSpecificationAlignment(pattern, letterConstraints, alignmentOptions);
+    if (alignmentMessage !== '') {
+      setStatus(alignmentMessage);
+      alert(alignmentMessage);
+      return;
+    }
+    setShowLetterSelector(false);
   };
 
   const getSelectedDeselectedSummary = () => {
-    const selected = Object.entries(letterStates)
-      .filter(([, state]) => state === 'selected')
-      .map(([letter]) => ({ letter, count: letterCounts[letter] || 1 }));
-    const deselected = Object.entries(letterStates)
-      .filter(([, state]) => state === 'deselected')
+    const selected = Object.entries(letterConstraints)
+      .filter(([, constraint]) => constraint && constraint > 0)
+      .map(([letter, count]) => ({ letter, count }));
+    const deselected = Object.entries(letterConstraints)
+      .filter(([, constraint]) => constraint === 0)
       .map(([letter]) => letter);
-    
+
     return { selected, deselected };
   };
 
@@ -446,9 +484,9 @@ export const HebrewMatcher = ({ className }) => {
           <div>
             <label htmlFor="pattern">תבנית לחיפוש</label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input 
-                id="pattern" 
-                placeholder="לדוגמה: ר?וא?" 
+              <input
+                id="pattern"
+                placeholder="לדוגמה: ר?וא?"
                 value={pattern}
                 onChange={(e) => setPattern(e.target.value)}
                 onKeyDown={(e) => {
@@ -614,13 +652,13 @@ export const HebrewMatcher = ({ className }) => {
           
           {/* Letter Selector Dialog */}
           {showLetterSelector && (
-            <div className="letter-dialog-overlay" onClick={() => setShowLetterSelector(false)}>
+            <div className="letter-dialog-overlay" onClick={handleLetterSelectorClose}>
               <div className="letter-dialog" onClick={(e) => e.stopPropagation()}>
                 <div className="letter-dialog-header">
                   <h3>בחירת אותיות</h3>
                   <button 
                     className="letter-dialog-close" 
-                    onClick={() => setShowLetterSelector(false)}
+                    onClick={handleLetterSelectorClose}
                   >
                     ×
                   </button>
@@ -646,10 +684,11 @@ export const HebrewMatcher = ({ className }) => {
                           );
                         }
                         
-                        const state = letterStates[key];
+                        const normalizedKey = normalizeFinalLetters(key);
+                        const constraint = letterConstraints[normalizedKey];
                         const className = `keyboard-key ${
-                          state === 'selected' ? 'selected' : 
-                          state === 'deselected' ? 'deselected' : 
+                          constraint && constraint > 0 ? 'selected' :
+                          constraint === 0 ? 'deselected' :
                           'neutral'
                         }`;
                         
@@ -677,30 +716,36 @@ export const HebrewMatcher = ({ className }) => {
                 {/* Count Controls for Selected Letters */}
                 {(() => {
                   const { selected } = getSelectedDeselectedSummary();
-                  if (selected.length > 0) {
-                    return (
-                      <div className="letter-count-controls">
-                        <h4>מספר פעמים לכל אות:</h4>
-                        <div className="count-inputs">
-                          {selected.map(item => (
-                            <div key={item.letter} className="count-input-group">
-                              <span className="letter-display">{item.letter}</span>
-                              <input 
-                                type="number" 
-                                min="1" 
-                                max="10"
-                                value={item.count}
-                                onChange={(e) => handleLetterCountChange(item.letter, e.target.value)}
-                                className="count-input"
-                              />
-                              <span className="count-label">פעמים</span>
-                            </div>
-                          ))}
+                  const hasSelection = selected.length > 0;
+                  return (
+                    <div className={`letter-count-section ${hasSelection ? 'has-selection' : 'empty'}`}>
+                      {hasSelection ? (
+                        <div className="letter-count-controls">
+                          <h4>מספר פעמים לכל אות:</h4>
+                          <div className="count-inputs">
+                            {selected.map(item => (
+                              <div key={item.letter} className="count-input-group">
+                                <span className="letter-display">{item.letter}</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="10"
+                                  value={item.count}
+                                  onChange={(e) => handleLetterCountChange(item.letter, e.target.value)}
+                                  className="count-input"
+                                />
+                                <span className="count-label">פעמים</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  }
-                  return null;
+                      ) : (
+                        <div className="letter-count-placeholder">
+                          בחר/י אות ירוקה כדי להגדיר את מספר ההופעות שלה.
+                        </div>
+                      )}
+                    </div>
+                  );
                 })()}
                 
                 {(() => {
@@ -723,17 +768,16 @@ export const HebrewMatcher = ({ className }) => {
                 })()}
                 
                 <div className="letter-dialog-actions">
-                  <button 
+                  <button
                     onClick={() => {
-                      setLetterStates({});
-                      setLetterCounts({});
+                      setLetterConstraints({});
                     }}
                     className="btn"
                   >
                     נקה הכל
                   </button>
                   <button 
-                    onClick={() => setShowLetterSelector(false)}
+                    onClick={handleLetterSelectorClose}
                     className="btn primary"
                   >
                     סגור
