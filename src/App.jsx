@@ -4,6 +4,7 @@ import { LandingPage } from './components/LandingPage';
 import { HebrewMatcher } from './components/HebrewMatcher';
 import { EnglishMatcher } from './components/EnglishMatcher';
 import RateCalculator from './components/RateCalculator';
+import Dashboard from './components/Dashboard';
 import './styles/App.css';
 import './styles/HebrewMatcher.css';
 import './styles/EnglishMatcher.css';
@@ -16,6 +17,7 @@ function App() {
         <Route path="/hebrew-matcher" element={<HebrewMatcher />} />
         <Route path="/english-matcher" element={<EnglishMatcher />} />
         <Route path="/rate-calculator" element={<RateCalculator />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </Router>
   );

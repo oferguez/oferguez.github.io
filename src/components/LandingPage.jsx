@@ -34,6 +34,7 @@ export const LandingPage = () => {
           </Link>
         ))}
       </div>
+
     </div>
   );
 };

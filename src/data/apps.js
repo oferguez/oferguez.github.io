@@ -1,5 +1,13 @@
 export const apps = [
   {
+    id: 'dashboard',
+    title: 'Dashboard',
+    description: 'Personal portal with links to frequently used tools and resources.',
+    tags: ['Productivity', 'Portal'],
+    path: '/dashboard',
+    endOfLine: true
+  },
+  {
     id: 'even-path-finder',
     title: 'Even Path Finder',
     description: 'Find the path through a grid with even/odd/triple weights.',
@@ -23,7 +31,6 @@ export const apps = [
     path: 'https://oferguez.github.io/LanguageLearning/',
     endOfLine: true
   },
-
   {
     id: 'hebrew-matcher',
     title: 'Hebrew Pattern Matcher',
@@ -48,7 +55,6 @@ export const apps = [
     path: '/rate-calculator',
     endOfLine: false
   },
-
   {
     id: 'noa-gallery',
     title: 'Art Gallery',
