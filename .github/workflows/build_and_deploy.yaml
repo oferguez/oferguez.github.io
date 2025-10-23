@@ -19,6 +19,9 @@ concurrency:
 
 jobs:
   build:
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/Publish')
+            || (github.event_name == 'pull_request' && github.base_ref == 'Publish')
+            || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/Publish') }}  
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
