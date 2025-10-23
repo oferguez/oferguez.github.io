@@ -7,7 +7,7 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
+  background: var(--colour1);
   color: var(--fg);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   line-height: 1.6;
@@ -107,4 +107,82 @@ html, body {
   border-radius: 6px;
   font-size: 0.8rem;
   color: #cbd5e1;
+}
+
+.portal {
+  margin-top: 20px;
+  background: rgba(255, 255, 255, 0.281);
+  padding: 48px;
+  border-radius: 28px;
+  box-shadow: 0 20px 38px rgba(56, 189, 248, 0.25);
+}
+
+.portal-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.portal-title {
+  margin: 0;
+  font-size: 2.25rem;
+  color: #0284c7;
+}
+
+.portal-subtitle {
+  margin: 12px 0 0;
+  color: #0f172a;
+  font-size: 1.05rem;
+}
+
+.portal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+}
+
+.portal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: linear-gradient(155deg, rgba(191, 219, 254, 0.9), rgba(167, 243, 208, 0.9));
+  border: 1px solid rgba(125, 211, 252, 0.6);
+  border-radius: 18px;
+  padding: 24px;
+  text-decoration: none;
+  color: #0f172a;
+  box-shadow: 0 18px 32px rgba(96, 165, 250, 0.28);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.portal-card iframe {
+  border-radius: 12px;
+  border: 1px solid #e0e7ff;
+  width: 400px;
+  height: 200px;
+}
+
+.portal-card:hover {
+  transform: translateY(-5px) scale(1.01);
+  box-shadow: 0 24px 36px rgba(59, 130, 246, 0.32);
+}
+
+.portal-card__title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #0ea5e9;
+}
+
+.portal-card__description {
+  color: rgba(15, 23, 42, 0.65);
+  line-height: 1.5;
+}
+
+.dashboard-container {
+  margin-top: 5dvh;
+  background: radial-gradient(circle at top left, rgba(191, 219, 254, 0.65), transparent 55%),
+              radial-gradient(circle at bottom right, rgba(167, 243, 208, 0.6), transparent 50%),
+              linear-gradient(180deg, rgba(224, 242, 254, 0.85), rgba(209, 250, 229, 0.9));
+  padding: 60px 40px;
+  border-radius: 32px;
+  box-shadow: 0 16px 42px rgba(56, 189, 248, 0.3);
 }
