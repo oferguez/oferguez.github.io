@@ -18,6 +18,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  if: >
+    (github.event_name == 'push' && github.ref_name == 'Publish') ||
+    (github.event_name == 'pull_request' && github.base_ref == 'Publish')
   build:
     runs-on: ubuntu-latest
     steps:
