@@ -19,6 +19,109 @@ html, body {
   padding: 40px 20px;
 }
 
+.landing-page {
+  min-height: 100vh;
+  padding: 40px 20px;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.65), rgba(15, 23, 42, 0.65)),
+    url('/the-sky-the-ocean-blue-horizon-wallpaper-preview.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.landing-page .container {
+  width: min(1200px, 100%);
+  background: rgba(15, 23, 42, 0.75);
+  border-radius: 24px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.4);
+}
+
+.dashboard-page {
+  min-height: 100vh;
+  padding: 40px 20px;
+  background-image:
+    linear-gradient(rgba(8, 47, 73, 0.05), rgba(8, 47, 73, 0.05)),
+    url('/vacation-white-sand-blue-water-blue-sea-wallpaper-preview.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dashboard-page .container {
+  width: min(1200px, 100%);
+}
+
+.recipes-page {
+  min-height: 100vh;
+  padding: 40px 20px;
+  background-image:
+    linear-gradient(rgba(167, 106, 101, 0.514), rgba(82, 150, 88, 0.432)),
+    url('/c1_fruit-horizon-ocean-pineapple.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recipes-page .container {
+  width: min(1200px, 100%);
+}
+
+.dashboard-container .header-nav {
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.dashboard-container .home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.45);
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.dashboard-container .home-link:hover {
+  background: rgba(29, 222, 236, 0.14);
+  color: var(--card);
+  transform: translateX(-2px);
+}
+
+.recipes-container .header-nav {
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.recipes-container .home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(45, 64, 28, 0.5);
+  color: #f9f6ef;
+  text-decoration: none;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.recipes-container .home-link:hover {
+  background: rgba(214, 163, 63, 0.3);
+  transform: translateX(-2px);
+}
+
 .header {
   text-align: center;
   margin-bottom: 60px;
@@ -38,6 +141,15 @@ html, body {
   background-clip: text;
 }
 
+.recipes-container .header .gradient-text-forward {
+  background-image: linear-gradient(90deg, var(--colour8), var(--colour6));
+}
+
+.recipes-container .header .gradient-text-backward {
+  background-image: linear-gradient(90deg, var(--colour6), var(--colour8));
+}
+
+
 .header h1 {
   font-size: 3rem;
   color: var(--accent);
@@ -53,7 +165,7 @@ html, body {
 
 .apps-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, 350px);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 24px;
 }
 
@@ -66,6 +178,7 @@ html, body {
 }
 
 .app-card {
+  max-width: 100%;
   background: var(--card);
   border: 1px solid #1f2937;
   border-radius: 16px;
@@ -136,11 +249,12 @@ html, body {
 
 .portal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 24px;
 }
 
 .portal-card {
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -157,7 +271,7 @@ html, body {
 .portal-card iframe {
   border-radius: 12px;
   border: 1px solid #e0e7ff;
-  width: 400px;
+  width: min(100%, 400px);
   height: 200px;
 }
 
@@ -178,11 +292,63 @@ html, body {
 }
 
 .dashboard-container {
-  margin-top: 5dvh;
+  margin: 0 auto;
   background: radial-gradient(circle at top left, rgba(191, 219, 254, 0.65), transparent 55%),
               radial-gradient(circle at bottom right, rgba(167, 243, 208, 0.6), transparent 50%),
-              linear-gradient(180deg, rgba(224, 242, 254, 0.85), rgba(209, 250, 229, 0.9));
+              linear-gradient(180deg, rgba(224, 242, 254, 0.65), rgba(209, 250, 229, 0.65));
   padding: 60px 40px;
   border-radius: 32px;
   box-shadow: 0 16px 42px rgba(56, 189, 248, 0.3);
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 40px 20px;
+  }
+}
+
+
+.recipes-container {
+  margin: 0 auto;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--colour7) 55%, transparent), transparent 60%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--colour4) 50%, transparent), transparent 55%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--colour4) 55%, transparent),
+      color-mix(in srgb, var(--colour7) 60%, transparent));
+  padding: 60px 40px;
+  border-radius: 32px;
+  box-shadow: 0 16px 42px rgba(26, 29, 18, 0.35);
+}
+
+.recipes-container .portal {
+  background: rgba(255, 245, 225, 0.65);
+  box-shadow: 0 20px 38px rgba(90, 58, 24, 0.3);
+}
+
+.recipes-container .portal-card {
+  background: linear-gradient(145deg, 
+    color-mix(in srgb, var(--colour4) 55%, transparent),
+    color-mix(in srgb, var(--colour7) 55%, transparent));
+  border: 1px solid rgba(122, 96, 47, 0.5);
+  color: #2f2a1f;
+  box-shadow: 0 18px 32px rgba(74, 53, 26, 0.28);
+}
+
+.recipes-container .portal-card:hover {
+  box-shadow: 0 24px 36px rgba(86, 62, 34, 0.36);
+}
+
+.recipes-container .portal-card__title {
+  color: var(--colour8);
+}
+
+.recipes-container .portal-card__description {
+  color: var(--colour8);
+}
+
+@media (max-width: 768px) {
+  .recipes-container {
+    padding: 40px 20px;
+  }
 }

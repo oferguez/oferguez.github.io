@@ -29,7 +29,7 @@ export const apps = [
     description: 'Flashcard style language learning game.',
     tags: [],
     path: 'https://oferguez.github.io/LanguageLearning/',
-    endOfLine: true
+    endOfLine: false
   },
   {
     id: 'hebrew-matcher',

@@ -1,14 +1,14 @@
 export const portalLinks = [
   {
     id: 'london-maps',
-    title: 'My London Fun Places',
-    description: 'Where to eat and drink and have fun in London',
+    title: 'Some Of My London Favorites',
+    description: 'Places to eat, drink and enjoy London',
     href: 'https://www.google.com/maps/d/u/0/edit?mid=1feJ19ACJDqoojolPlFH0QsKe6VocLw8&usp=sharing',
   },
   {
     id: 'prod-connectivity',
     title: 'Product Dashboard',
-    description: 'Uptime metrics',
+    description: 'Service uptime monitoring dashboard',
     href: 'https://stats.uptimerobot.com/1DvLyJF104',
   },  
   {
@@ -22,6 +22,12 @@ export const portalLinks = [
     title: 'GitHub',
     description: 'Public projects and experiments.',
     href: 'https://github.com/oferguez',
+  },
+  {
+    id: 'my-recipes',
+    title: 'My Online Recipes',
+    description: 'Some of my published recipes collection',
+    href: '/Recipes',
   },
   {
     id: 'tgs-email',
