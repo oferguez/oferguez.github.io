@@ -1,23 +1,24 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'; 
 import { portalLinks } from '../data/portalLinks';
-
-const Dashboard = () => {
+import { recipeLinks } from '../data/recipeLinks';
+ 
+const RecipeCollection = () => {
   return (
-    <div className="dashboard-page">
-      <div className="container dashboard-container">
+    <div className="recipes-page">
+      <div className="container recipes-container">
         <div className="header-nav">
           <Link to="/" className="home-link">← Back to Landing Page</Link>
         </div>
         <header className="header">
-          <h1 className="gradient-text-forward">Dashboard</h1>
-          <p className="gradient-text-backward">Quick useful links</p>
+          <h1 className="gradient-text-forward">Recipes</h1>
+          <p className="gradient-text-backward">Some Published Recipes, in The Guardian (English) and in Ori Shavit's site (Hebrew)</p>
         </header>
 
 
         <section className="portal">
           <div className="portal-grid">
-            {portalLinks.map((link) => (
+            {recipeLinks.map((link) => (
               <a
                 key={link.id}
                 href={link.href}
@@ -38,4 +39,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default RecipeCollection;

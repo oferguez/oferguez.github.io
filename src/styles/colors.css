@@ -13,6 +13,8 @@
   --colour4: rgb(240, 240, 215);
   --colour5: rgb(143, 225, 160);
   --colour6: rgb(225, 143, 150);
+  --colour7: rgb(191, 196, 155);
+  --colour8: rgb(226, 79, 91);
 
   /* Semantic color mappings for HebrewMatcher */
   --colour-selected: var(--colour5);
