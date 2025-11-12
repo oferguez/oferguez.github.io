@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  diagnostic:
+  diagnostics:
     if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/Publish')
             || (github.event_name == 'pull_request' && github.base_ref == 'Publish')
             || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/Publish') }}  
