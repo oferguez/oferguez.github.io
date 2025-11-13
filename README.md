@@ -1,124 +1,140 @@
 # Web Apps Landing Page
 
-A React-based landing page that serves as a centralized hub for various web applications and tools.
+React + Vite powered landing page that collects several personal tools, experiments, and kid-friendly learning games into one deployable site. Each app lives under its own route, while experiments hosted elsewhere are linked directly from the landing grid.
 
-## Todo
+## Apps at a Glance
 
-- [x] iphone display (keyboard dlg)
-- [x] are the word lists being hashed locally after first load? and for how long? lifespan
-- [x] find what are the /a/b/c etc suffixes in he_IL
-- [x] Colour Scheme: https://colorhunt.co/palette/727d73aab99ad0ddd0f0f0d7
-- [x] back to main screen link
-- [x] refactor sources selection, so it will generate the check box list of sources automatically
-- [x] in the result also specify from what sources were the words found in 
-- [x] rate calc & matrix with color modes and cell selection
-- [x] rate calc localStorage persistence
-- [x] letter selector count (specify how many times a letter must appear)
-- [x] add EnglishMatcher
-- [X] clear up "inClass [ ]" hallucination
-- [ ] horizon-like background 
-- [ ] Persist user gui selections
-- [ ] about dialog w build info etc
-- [ ] letter selector validation (e.g. there can't be more mandatory letters than pattern length if full word match is checked)
-- [ ] unit tests & CI
-- [ ] refactor monolithic HebrewMatcher, extract common factor for English/Hebrew matchers 
-- [ ] optimization? 
-- [ ] server side logic? (avoiding heavy download of dictionaries)
-- [ ] for PR, a merge strategy that will always override certain files (such as this readme) on publish with content from main
-## Unrelated random
+| App | Route / Destination | Highlights |
+| --- | --- | --- |
+| Dashboard | `/dashboard` | Personal portal with frequently used productivity links driven by `portalLinks.js`. |
+| Hebrew Pattern Matcher | `/hebrew-matcher` | Advanced Hebrew word search with multiple datasets, custom lists, keyboard, and letter constraints. |
+| English Pattern Matcher | `/english-matcher` | 12dicts-based English matcher with regex-like templates, case handling, and source-aware results. |
+| Win Rate Calculator | `/rate-calculator` | Gaming win-rate helper with auto-computed totals and a configurable matrix visualizer. |
+| Recipe Collection | `/Recipes` | Curated Guardian/Ori Shavit recipes sourced from `recipeLinks.js`. |
+| External games & tools | e.g. Even Path Finder, Arithmetic Game, Language Game, Art Gallery | Linked directly via `src/data/apps.js`, opening in a new tab. |
 
-- [ ] available sublinks - how to browse recursively all content available under a url? like ls-R ?
-- [ ] add fun sections such as recipe published in guardian/oshavit, social media etc
-- [ ] SEO
-- [ ] Visitors report
+## Feature Highlights
 
-## Features
+### English Pattern Matcher
+- Shares the batch search utilities but swaps in English-specific regex rules, case normalization, and the QWERTY keyboard.
+- Ships with several 12dicts sources (British, American, core, neologisms) stored in `public/English/...`.
+- Custom lists (URL or paste) are merged with selectable default wordlists, with optional deduping and source labels in the results.
+- Pattern analyzer keeps letter requirements and manual constraints in sync, warning when mismatched.
 
-- **Landing Page**: Clean, responsive design showcasing available web apps
-- **Hebrew Pattern Matcher**: Advanced Hebrew word search with pattern matching, letter constraints, and frequency requirements
-- **Win Rate Calculator**: Gaming statistics calculator with interactive matrix visualization
-- **Modular Architecture**: Easy to add new web apps to the collection
+### Hebrew Pattern Matcher
+- Pattern templates use `?` slots and `[קשת]` character classes, normalizing final letters for accurate matching.
+- Toggle whole-word search, strip niqqud while searching, and mix built-in datasets (`he_IL.dic`, nouns, verbs, names, settlements, bible, etc.).
+- Letter selector auto-aligns constraints with the current pattern; conflicts are detected via `letterSpecificationAlignment`.
+- Supports ad-hoc sources via pasted wordlists or remote URLs with batching, deduplication, and per-source status updates.
+- Mobile-friendly Hebrew keyboard and match export (`matches.txt`) keep the UI usable on phones.
 
-## Quick Start
+### Win Rate Calculator
+- Enter any two of wins/losses/total to auto-derive the third and compute the rounded win percentage.
+- Displays “wins needed to round up” and “losses needed to round down” to hit the next threshold.
+- Matrix view renders a W/L grid with selectable size, three visualization modes (numbers, colors, both), and click-to-calc shortcuts.
+- All inputs, matrix settings, and visualization preferences persist to `localStorage`.
+
+### Dashboard & Recipes
+- `Dashboard.jsx` and `RecipeCollection.jsx` are simple data-driven portals—updating the arrays in `src/data/portalLinks.js` or `src/data/recipeLinks.js` instantly refreshes the cards.
+- Both pages include navigation back to `/`, responsive card grids, and open external resources in new tabs.
+
+## Getting Started
 
 ```bash
-# Install dependencies
+# Install dependencies (Node 18+ recommended for Vite)
 npm install
 
-# Start development server
+# Start the development server
 npm run dev
 
-# Build for production
+# Build the production bundle
 npm run build
 ```
 
-## Available Apps
+Open `http://localhost:5173` (or the Vite-reported port) to preview changes.
 
-### Hebrew Pattern Matcher
-A powerful tool for searching Hebrew words using advanced pattern matching. Features include:
-- **Pattern-based search** using `?` for any Hebrew letter
-- **Character classes** support like `[אי]`
-- **Letter constraints** - specify which letters must/must not appear
-- **Letter frequency** - require letters to appear a specific number of times
-- **Multiple Hebrew wordlist sources** from various datasets
-- **Custom wordlist support** via URL or manual input
-- **Text processing options** (niqqud removal, deduplication, sorting)
-- **Export functionality** for search results
-- **Responsive design** with mobile-optimized Hebrew keyboard
+## npm Scripts
 
-### Win Rate Calculator
-A comprehensive gaming statistics calculator with advanced visualization. Features include:
-- **Win/Loss/Total calculation** - enter any 2 values, auto-calculates the third
-- **Rate analysis** - current win percentage with wins needed to improve/losses to drop
-- **Interactive matrix visualization** with multiple display modes:
-  - Number mode: Shows percentages as text
-  - Color mode: Pastel green gradient based on win rates
-  - Both mode: Numbers with color backgrounds
-- **Dynamic color scaling** - colors adjust to current data range for maximum contrast
-- **Single-click cell selection** - click any cell to recalculate from that W/L ratio
-- **Persistent settings** - localStorage saves all inputs and matrix preferences
-- **Mobile responsive** - works perfectly on iPhone and all screen sizes
+- `npm run dev` – Vite development server with React Fast Refresh.
+- `npm run build` – Production build to `dist/`.
+- `npm run preview` – Serves the built assets locally for smoke testing.
+- `npm run lint` – ESLint across `.js/.jsx` files.
+- `npm run deploy` – Builds and publishes `dist/` to GitHub Pages via `gh-pages` (runs `build` automatically through `predeploy`).
 
-## Tech Stack
+## Deployment
 
-- **React**: Frontend framework
-- **Vite**: Build tool and development server
-- **React Router**: Client-side routing
-- **CSS**: Styling with custom properties for theming
+1. `npm run deploy` builds the site and pushes the contents of `dist/` to the `gh-pages` branch.
+2. Ensure the repository is configured on GitHub to serve Pages from that branch.
+3. Static assets (wordlists, backgrounds, etc.) live in `public/` and are copied as-is during the build, so keep large dictionaries there.
 
-## Development
+## Data Sources and Assets
 
-The project is structured for easy extensibility:
+### English word lists (from [12dicts](http://wordlist.aspell.net/12dicts/))
+- `public/English/American/2of12.txt`
+- `public/English/American/2of12inf.txt`
+- `public/English/International/2of4brif.txt`
+- `public/English/International/3of6all.txt`
+- `public/English/International/3of6game.txt`
+- `public/English/Special/2of5core.txt`
+- `public/English/Special/neol2016_cleaned.txt`
 
-1. **Add New Apps**: Create components in `src/components/`
-2. **Update Routing**: Add routes in `src/App.jsx`
-3. **Update Landing Page**: Add app entries to `src/components/LandingPage.jsx`
+### Hebrew word lists
+- `public/he_IL.dic` – https://spellcheck-dictionaries.github.io/he_IL/he_IL.dic
+- `public/names.csv` – https://data.gov.il/dataset/firs-name
+- `public/settlements.txt` – https://data.gov.il/dataset/citiesandsettelments
+- `public/bible.txt` – https://github.com/eyaler/hebrew_wordlists/blob/main/bible.txt
+- `public/adjectives.txt`, `public/nouns.txt`, `public/verbs_no_fatverb.txt` – https://github.com/eyaler/hebrew_wordlists
+
+Backgrounds such as `c1_fruit-horizon-ocean-pineapple.jpg` are stored alongside the dictionaries for quick swaps.
 
 ## Project Structure
 
 ```
 src/
-├── components/              # React components
-│   ├── LandingPage.jsx     # Main landing page with app grid
-│   ├── HebrewMatcher.jsx   # Hebrew word pattern matching tool
-│   └── RateCalculator.jsx  # Win rate calculator with matrix visualization
-├── styles/                 # CSS files
-│   ├── App.css            # Main app styles and landing page
-│   ├── HebrewMatcher.css  # Hebrew matcher component styles
-│   └── RateCalculator.css # Rate calculator component styles
-├── App.jsx                # Main app with routing
-└── main.jsx              # React app entry point
+├── components/
+│   ├── LandingPage.jsx
+│   ├── Dashboard.jsx
+│   ├── RecipeCollection.jsx
+│   ├── HebrewMatcher.jsx
+│   ├── EnglishMatcher.jsx
+│   └── RateCalculator.jsx
+├── data/
+│   ├── apps.js          # Landing grid entries (internal routes + external links)
+│   ├── portalLinks.js   # Dashboard cards
+│   └── recipeLinks.js   # Recipe cards
+├── styles/
+│   ├── App.css
+│   ├── HebrewMatcher.css
+│   ├── EnglishMatcher.css
+│   └── RateCalculator.css
+├── utils/
+│   └── wordMatcher.js   # Shared batching/regex/letter requirement helpers
+├── App.jsx              # Router configuration
+└── main.jsx             # React entry point
+public/
+├── English/...          # 12dicts sources
+├── *.txt / *.csv        # Hebrew datasets
+└── images               # Background art
 ```
 
-## English Word Lists downloaded from [12dicts](http://wordlist.aspell.net/12dicts/)
+## Customization Tips
 
-## Hebrew Words List downloaded from:
+- **Add or reorder apps**: Edit `src/data/apps.js`. Internal routes use `path: '/your-route'`; external URLs open in a new tab.
+- **Update portal/recipe links**: Modify `src/data/portalLinks.js` or `src/data/recipeLinks.js`.
+- **Adjust word-match behavior**: `src/utils/wordMatcher.js` centralizes regex building, batching, and letter-alignment logic shared by both matchers.
+- **Add new datasets**: Drop files into `public/` (or nested folders) and reference them from the matcher `sources` arrays.
+- **Styling**: Global theme lives in `src/styles/App.css`; per-app overrides in their respective CSS files.
 
-### adjectives: https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/adjectives.txt
-### nouns: https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/nouns.txt
-### verbs: https://raw.githubusercontent.com/eyaler/hebrew_wordlists/main/verbs_no_fatverb.txt
-### he_IL: https://spellcheck-dictionaries.github.io/he_IL/he_IL.dic
-### wordlists: https://github.com/eyaler/hebrew_wordlists
-### bible: https://github.com/eyaler/hebrew_wordlists/blob/main/bible.txt
-### names: https://data.gov.il/dataset/firs-name
-### settlements: https://data.gov.il/dataset/citiesandsettelments
+## Roadmap
+
+- [X] Landing page polish: horizon-like background + updated gradients.
+- [ ] Persist matcher UI selections beyond current defaults (sources, toggles, keyboard visibility).
+- [ ] About dialog with build info and dataset versions.
+- [X] Letter selector validation to prevent impossible combinations (e.g., more mandatory letters than pattern length).
+- [X] Extract additional shared logic from matchers to reduce duplication and improve testability.
+- [ ] Implement automated tests + CI (word-matcher utilities, calculator math, routing smoke tests).
+- [ ] Optimize large dictionary loading (caching strategy or chunked server-side endpoint).
+- [ ] Investigate merge strategy that keeps certain files (README, datasets) aligned with `main` during PR publishes.
+- [X] Add recursive “available sublinks” explorer for any URL (a lightweight crawler).
+- [ ] SEO
+- [X] visitor analytics to better understand site usage.
