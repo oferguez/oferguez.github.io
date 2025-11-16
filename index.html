@@ -14,8 +14,15 @@
       gtag('config', 'G-XG9DDKEB7F');
     </script>    
     <script>
-      if (window.location.search.includes('dev_visit=true')) {
-        document.cookie = "dev_visit=true; path=/;";
+      const params = new URLSearchParams(window.location.search);
+      const devParam = params.get('dev_visit');
+
+      if (devParam === 'true') {
+        gtag('set', { user_properties: { dev_visit: 'true' }});
+      } else if (devParam === 'false') {
+        gtag('set', { user_properties: { dev_visit: 'false' }});
+      } else {
+        gtag('set', { user_properties: { dev_visit: 'none' }});
       }
     </script>    
   </head>
