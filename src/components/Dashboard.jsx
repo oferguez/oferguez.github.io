@@ -14,7 +14,6 @@ const Dashboard = () => {
           <p className="gradient-text-backward">Quick useful links</p>
         </header>
 
-
         <section className="portal">
           <div className="portal-grid">
             {portalLinks.map((link) => (
