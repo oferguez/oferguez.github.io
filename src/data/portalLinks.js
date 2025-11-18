@@ -29,6 +29,12 @@ export const portalLinks = [
     description: 'Some of my published recipes collection',
     href: '/Recipes',
   },
+  // {
+  //   id: 'analytics-dev',
+  //   title: 'Analytics Dev',
+  //   description: 'Toggle analytics dev mode and open GA/GTM tools',
+  //   href: '/dev',
+  // },
   {
     id: 'tgs-email',
     title: 'Email Digester',
