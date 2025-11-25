@@ -19,6 +19,12 @@ const analyticsLinks = [
     description: 'Validate tag firing and event delivery',
     href: 'https://tagassistant.google.com/',
   },
+  {
+    id: 'last_7d_report',
+    label: 'Last 7 Days',
+    description: 'Users activity for the last 7 days',
+    href: 'https://docs.google.com/spreadsheets/d/1jMngSTEOUzRjag2v-3aCY03pe1_2Hy0hp4NEGAvUli0/edit?usp=sharing',
+  }
 ];
 
 const Analytics = () => {
