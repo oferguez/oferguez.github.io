@@ -27,8 +27,45 @@ const analyticsLinks = [
   }
 ];
 
+function extractGACookies() {
+  const cookies = Object.fromEntries(
+    document.cookie.split('; ').map(c => c.split('=').map(decodeURIComponent))
+  );
+
+  const pseudo_id = (() => {
+    const ga = cookies['_ga'];
+    if (!ga) return null;
+    const parts = ga.split('.');
+    return parts.length === 4 ? `${parts[2]}.${parts[3]}` : null;
+  })();
+
+  const session_id = (() => {
+    const entry = Object.entries(cookies).find(([key]) =>
+      key.startsWith('_ga_')
+    );
+    if (!entry) return null;
+    const value = entry[1];
+    const parts = value.split('.');
+    if (parts.length < 3)
+      return null;
+
+    const match = parts[2].match(/t(\d+)/);
+    return match ? match[1] : null;
+  })();
+
+  const dev_visit = cookies['dev_visit'] || null;
+
+  return {
+    pseudo_id,
+    session_id,
+    dev_visit
+  };
+}
+
+
+
 const Analytics = () => {
-  const [devCookieValue, setDevCookieValue] = useState(null);
+  const [devCookieValue, setDevCookieValue] = useState('false');
 
   const getCookie = (name) => {
     return document.cookie
@@ -40,7 +77,7 @@ const Analytics = () => {
 
   useEffect(() => {
     const value = getCookie('dev_visit');
-    setDevCookieValue(value ?? null);
+    setDevCookieValue(value ?? 'false');
   }, []);
 
   const isDevCookieTrue = devCookieValue === 'true';
@@ -49,13 +86,21 @@ const Analytics = () => {
     const domain = location.hostname.endsWith('oferguez.net') ? '.oferguez.net' : undefined;
     document.cookie = `dev_visit=true; path=/; ${domain ? "domain=.oferguez.net;" : ""} max-age=31536000; SameSite=Lax`;
     setDevCookieValue('true');
+    logDebugState('enableAnalyticsDevMode')
   };
 
   const disableAnalyticsDevMode = () => {
     const domain = location.hostname.endsWith('oferguez.net') ? '.oferguez.net' : undefined;
-    document.cookie = `dev_visit=; path=/; ${domain ? "domain=.oferguez.net;" : ""} max-age=0; SameSite=Lax`;
+    document.cookie = `dev_visit=false; path=/; ${domain ? "domain=.oferguez.net;" : ""} max-age=31536000; SameSite=Lax`;
     setDevCookieValue('false');
+    logDebugState('disableAnalyticsDevMode')
   };
+
+
+
+  const logDebugState = (caller) => {
+    console.log(`Called by ${caller}, GA4 IDs:`, extractGACookies());
+  }
 
   return (
     <section className="analytics">
