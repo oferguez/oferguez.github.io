@@ -40,6 +40,14 @@ function extractGACookies() {
     return parts.length === 4 ? `${parts[2]}.${parts[3]}` : null;
   })();
 
+  const _ga_value  = (() => {
+    const entry = Object.entries(cookies).find(([key]) =>
+      key.startsWith('_ga_')
+    );
+    if (!entry) return null;
+    return entry;
+  })();
+
   const session_id = (() => {
     const entry = Object.entries(cookies).find(([key]) =>
       key.startsWith('_ga_')
@@ -50,7 +58,7 @@ function extractGACookies() {
     if (parts.length < 3)
       return null;
 
-    const match = parts[2].match(/t(\d+)/);
+    const match = parts[2].match(/s(\d+)/);
     return match ? match[1] : null;
   })();
 
@@ -59,6 +67,7 @@ function extractGACookies() {
   return {
     pseudo_id,
     session_id,
+    _ga_value,
     dev_visit
   };
 }
@@ -96,8 +105,6 @@ const Analytics = () => {
     setDevCookieValue('false');
     logDebugState('disableAnalyticsDevMode')
   };
-
-
 
   const logDebugState = (caller) => {
     const message = `Called by ${caller}, GA4 IDs: ${JSON.stringify(extractGACookies())}`;
