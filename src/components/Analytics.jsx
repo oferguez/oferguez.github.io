@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import {logDevMessage, logDevError} from "../utils/SentryDevClient";
 
 const analyticsLinks = [
   {
@@ -99,7 +100,9 @@ const Analytics = () => {
 
 
   const logDebugState = (caller) => {
-    console.log(`Called by ${caller}, GA4 IDs:`, extractGACookies());
+    const message = `Called by ${caller}, GA4 IDs: ${JSON.stringify(extractGACookies())}`;
+    console.log(message);
+    logDevMessage(message);
   }
 
   return (
