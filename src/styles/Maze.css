@@ -284,6 +284,70 @@
   padding: 24px 0;
 }
 
+.maze-question-panel {
+  margin-top: 16px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(248, 250, 252, 0.15);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
+}
+
+.maze-question-panel h3 {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 1.1rem;
+}
+
+.question-prompt {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.question-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.question-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(2, 6, 23, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.question-option input {
+  accent-color: var(--accent);
+}
+
+.question-option.is-selected {
+  border-color: rgba(244, 114, 182, 0.9);
+  background: rgba(244, 114, 182, 0.12);
+}
+
+.question-submit {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+  color: #0f172a;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.question-error {
+  margin: 8px 0 0;
+  color: #fecaca;
+  font-weight: 600;
+}
+
 .confetti-overlay {
   position: absolute;
   inset: 0;

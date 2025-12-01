@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { RectMaze } from '../utils/rectMaze.js';
 import '../styles/Maze.css';
 
-const DEFAULT_ROWS = 4;
-const DEFAULT_COLS = 4;
+const DEFAULT_ROWS = 8;
+const DEFAULT_COLS = 8;
 const MIN_DIM = 4;
 const MAX_DIM = 40;
+const QUESTION_BANK = createQuestionBank();
+const DEFAULT_CHALLENGE_INTERVAL = 4;
 
 
 const clampDimension = (value, fallback) => {
@@ -21,6 +23,7 @@ function Maze({
   initialRows = DEFAULT_ROWS,
   initialCols = DEFAULT_COLS,
   initialSeed = '',
+  challengeInterval = DEFAULT_CHALLENGE_INTERVAL,
 }) {
   const [rowsInput, setRowsInput] = useState(String(initialRows));
   const [colsInput, setColsInput] = useState(String(initialCols));
@@ -33,6 +36,12 @@ function Maze({
   const [hasWon, setHasWon] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiPieces, setConfettiPieces] = useState([]);
+  const [stepCount, setStepCount] = useState(0);
+  const [activeQuestion, setActiveQuestion] = useState(null);
+  const [questionCursor, setQuestionCursor] = useState(0);
+  const [pendingMove, setPendingMove] = useState(null);
+  const [selectedAnswer, setSelectedAnswer] = useState('');
+  const [questionError, setQuestionError] = useState('');
   const confettiTimeoutRef = useRef(null);
 
   const dimensions = useMemo(() => {
@@ -53,12 +62,24 @@ function Maze({
       setVisitedCells(new Set(['0-0']));
       setHasWon(false);
       setShowConfetti(false);
+      setStepCount(0);
+      setActiveQuestion(null);
+      setPendingMove(null);
+      setSelectedAnswer('');
+      setQuestionError('');
+      setQuestionCursor(0);
       setError('');
     } catch (err) {
       setMazeGrid([]);
       setVisitedCells(new Set());
       setHasWon(false);
       setShowConfetti(false);
+      setStepCount(0);
+      setActiveQuestion(null);
+      setPendingMove(null);
+      setSelectedAnswer('');
+      setQuestionError('');
+      setQuestionCursor(0);
       setError(err.message || 'Failed to generate maze');
     }
   };
@@ -123,8 +144,13 @@ function Maze({
     }
   };
 
+  const completeMove = (row, column) => {
+    moveToCell(row, column);
+    setStepCount((prev) => prev + 1);
+  };
+
   const tryMove = (direction) => {
-    if (mazeGrid.length === 0) {
+    if (mazeGrid.length === 0 || activeQuestion) {
       return;
     }
     const { row, column } = currentCell;
@@ -162,13 +188,23 @@ function Maze({
     }
 
     if (targetRow !== row || targetColumn !== column) {
-      moveToCell(targetRow, targetColumn);
+      const nextStep = stepCount + 1;
+      if (challengeInterval > 0 && nextStep % challengeInterval === 0) {
+        const question = QUESTION_BANK[questionCursor % QUESTION_BANK.length];
+        setActiveQuestion(question);
+        setQuestionCursor((prev) => prev + 1);
+        setPendingMove({ row: targetRow, column: targetColumn });
+        setSelectedAnswer('');
+        setQuestionError('');
+        return;
+      }
+      completeMove(targetRow, targetColumn);
     }
   };
 
   const handleKeyDown = (event) => {
     const directions = new Set(['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft']);
-    if (!directions.has(event.key)) {
+    if (activeQuestion || !directions.has(event.key)) {
       return;
     }
     event.preventDefault();
@@ -176,7 +212,7 @@ function Maze({
   };
 
   const handleCellClick = (row, column) => {
-    if (mazeGrid.length === 0) {
+    if (mazeGrid.length === 0 || activeQuestion) {
       return;
     }
     const rowDiff = row - currentCell.row;
@@ -198,6 +234,27 @@ function Maze({
 
   const handleToggleControls = () => {
     setControlsOpen((prev) => !prev);
+  };
+
+  const handleAnswerSubmit = () => {
+    if (!activeQuestion || !pendingMove) {
+      return;
+    }
+    if (selectedAnswer === '') {
+      setQuestionError('Choose an answer to continue.');
+      return;
+    }
+    const numericAnswer = Number(selectedAnswer);
+    if (numericAnswer !== activeQuestion.answer) {
+      setQuestionError('Not quite. Try again!');
+      return;
+    }
+    setQuestionError('');
+    const { row, column } = pendingMove;
+    setActiveQuestion(null);
+    setPendingMove(null);
+    setSelectedAnswer('');
+    completeMove(row, column);
   };
 
   return (
@@ -337,6 +394,35 @@ function Maze({
                 <p className="maze-placeholder">Generate a maze to view it here.</p>
               )}
             </div>
+            {activeQuestion && (
+              <div className="maze-question-panel" aria-live="polite">
+                <h3>Checkpoint challenge</h3>
+                <p className="question-prompt">{activeQuestion.prompt}</p>
+                <div className="question-options">
+                  {activeQuestion.choices.map((choice) => (
+                    <label
+                      key={`${activeQuestion.id}-${choice}`}
+                      className={`question-option ${
+                        selectedAnswer === String(choice) ? 'is-selected' : ''
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="maze-question"
+                        value={choice}
+                        checked={selectedAnswer === String(choice)}
+                        onChange={(event) => setSelectedAnswer(event.target.value)}
+                      />
+                      <span>{choice}</span>
+                    </label>
+                  ))}
+                </div>
+                <button type="button" className="question-submit" onClick={handleAnswerSubmit}>
+                  Submit answer
+                </button>
+                {questionError && <p className="question-error">{questionError}</p>}
+              </div>
+            )}
           </section>
         </section>
       </div>
@@ -345,3 +431,57 @@ function Maze({
 }
 
 export default Maze;
+
+function createQuestionBank() {
+  const additions = [];
+  for (let a = 0; a <= 20; a += 1) {
+    for (let b = 0; b <= 20; b += 1) {
+      if (a + b <= 20) {
+        additions.push({ a, b, op: '+' });
+      }
+    }
+  }
+
+  const subtractions = [];
+  for (let a = 0; a <= 20; a += 1) {
+    for (let b = 0; b <= a; b += 1) {
+      const result = a - b;
+      if (result >= 0 && result <= 20) {
+        subtractions.push({ a, b, op: '-' });
+      }
+    }
+  }
+
+  const additionSet = shuffle(additions).slice(0, 20);
+  const subtractionSet = shuffle(subtractions).slice(0, 20);
+  return [...additionSet, ...subtractionSet].map((item, index) => createQuestion(item, index));
+}
+
+function createQuestion({ a, b, op }, index) {
+  const answer = op === '+' ? a + b : a - b;
+  const operatorSymbol = op === '+' ? '+' : '−';
+  const prompt = `${a} ${operatorSymbol} ${b} = ?`;
+  const distractors = new Set();
+  while (distractors.size < 3) {
+    const candidate = Math.floor(Math.random() * 21);
+    if (candidate !== answer) {
+      distractors.add(candidate);
+    }
+  }
+  const choices = shuffle([answer, ...distractors]);
+  return {
+    id: `q-${index}`,
+    prompt,
+    answer,
+    choices,
+  };
+}
+
+function shuffle(list) {
+  const array = [...list];
+  for (let i = array.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
