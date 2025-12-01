@@ -56,6 +56,14 @@ export const apps = [
     endOfLine: false
   },
   {
+    id: 'maze-generator',
+    title: 'Maze Generator',
+    description: 'Create rectangular mazes with specific row/column sizes and optional seeds.',
+    tags: ['Games', 'Puzzles', 'React'],
+    path: '/maze',
+    endOfLine: false
+  },
+  {
     id: 'noa-gallery',
     title: 'Art Gallery',
     description: 'Noa\'s Art gallery',

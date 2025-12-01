@@ -85,8 +85,8 @@ class RectRange {
 }
 
 class SeededRandom {
-  constructor(seed) {
-    this._rng = seedrandom(String(seed));
+  constructor(seed = null) {
+    this._rng = seed ? seedrandom(String(seed)) : seedrandom();
   }
 
   nextDouble() {
@@ -259,7 +259,7 @@ class RectMaze {
     this._connected.clear();
     this._randomiser =
       randomSeed === null || randomSeed === undefined
-        ? null
+        ? new SeededRandom()
         : new SeededRandom(randomSeed);
 
     for (let r = 0; r < this._cells.length; r += 1) {
@@ -378,6 +378,30 @@ class RectMaze {
 
     return mazeMap.map((row) => row.join("")).join("\n");
   }
+  
+  toCellGrid() {
+    return Array.from({ length: this._rows }, (_, r) =>
+      Array.from({ length: this._columns }, (_, c) => {
+        const cell = this._cells[r][c];
+        const topCell = r > 0 ? this._cells[r - 1][c] : null;
+        const rightCell = c < this._columns - 1 ? this._cells[r][c + 1] : null;
+        const bottomCell = r < this._rows - 1 ? this._cells[r + 1][c] : null;
+        const leftCell = c > 0 ? this._cells[r][c - 1] : null;
+        return {
+          row: cell.row,
+          column: cell.column,
+          payload: cell.payload,
+          walls: {
+            top: topCell === null || !this.areConnected(cell, topCell),
+            right: rightCell === null || !this.areConnected(cell, rightCell),
+            bottom: bottomCell === null || !this.areConnected(cell, bottomCell),
+            left: leftCell === null || !this.areConnected(cell, leftCell),
+          },
+        };
+      })
+    );
+  }
+
 }
 
 export { MGDefaults, RectCell, RectRange, RectMaze };
