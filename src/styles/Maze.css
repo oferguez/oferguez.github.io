@@ -207,6 +207,7 @@
   min-height: clamp(320px, 70vh, 900px);
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .maze-meta {
@@ -285,12 +286,13 @@
 }
 
 .maze-question-panel {
-  margin-top: 16px;
+  margin-top: 0;
   background: rgba(15, 23, 42, 0.75);
   border: 1px solid rgba(248, 250, 252, 0.15);
   border-radius: 16px;
   padding: 16px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
+  width: min(360px, 100%);
 }
 
 .maze-question-panel h3 {
@@ -380,4 +382,14 @@
     transform: translate3d(0, 100vh, 0) rotate(520deg);
     opacity: 0;
   }
+}
+.maze-question-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 40;
 }

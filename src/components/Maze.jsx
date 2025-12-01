@@ -395,32 +395,40 @@ function Maze({
               )}
             </div>
             {activeQuestion && (
-              <div className="maze-question-panel" aria-live="polite">
-                <h3>Checkpoint challenge</h3>
-                <p className="question-prompt">{activeQuestion.prompt}</p>
-                <div className="question-options">
-                  {activeQuestion.choices.map((choice) => (
-                    <label
-                      key={`${activeQuestion.id}-${choice}`}
-                      className={`question-option ${
-                        selectedAnswer === String(choice) ? 'is-selected' : ''
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="maze-question"
-                        value={choice}
-                        checked={selectedAnswer === String(choice)}
-                        onChange={(event) => setSelectedAnswer(event.target.value)}
-                      />
-                      <span>{choice}</span>
-                    </label>
-                  ))}
+              <div
+                className="maze-question-overlay"
+                role="dialog"
+                aria-modal="true"
+                aria-live="polite"
+                aria-label="Checkpoint challenge"
+              >
+                <div className="maze-question-panel">
+                  <h3>Checkpoint challenge</h3>
+                  <p className="question-prompt">{activeQuestion.prompt}</p>
+                  <div className="question-options">
+                    {activeQuestion.choices.map((choice) => (
+                      <label
+                        key={`${activeQuestion.id}-${choice}`}
+                        className={`question-option ${
+                          selectedAnswer === String(choice) ? 'is-selected' : ''
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="maze-question"
+                          value={choice}
+                          checked={selectedAnswer === String(choice)}
+                          onChange={(event) => setSelectedAnswer(event.target.value)}
+                        />
+                        <span>{choice}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <button type="button" className="question-submit" onClick={handleAnswerSubmit}>
+                    Submit answer
+                  </button>
+                  {questionError && <p className="question-error">{questionError}</p>}
                 </div>
-                <button type="button" className="question-submit" onClick={handleAnswerSubmit}>
-                  Submit answer
-                </button>
-                {questionError && <p className="question-error">{questionError}</p>}
               </div>
             )}
           </section>
