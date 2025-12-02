@@ -8,6 +8,14 @@ export const apps = [
     endOfLine: true
   },
   {
+    id: 'maze-generator',
+    title: `Shira's Maze Game`,
+    description: 'Create rectangular mazes with specific row/column sizes and optional seeds.',
+    tags: ['Games', 'Puzzles', 'React'],
+    path: '/maze',
+    endOfLine: false
+  },
+  {
     id: 'even-path-finder',
     title: 'Even Path Finder',
     description: 'Find the path through a grid with even/odd/triple weights.',

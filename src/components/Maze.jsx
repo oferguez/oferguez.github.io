@@ -8,7 +8,9 @@ const DEFAULT_COLS = 8;
 const MIN_DIM = 4;
 const MAX_DIM = 40;
 const QUESTION_BANK = createQuestionBank();
-const DEFAULT_CHALLENGE_INTERVAL = 4;
+const DEFAULT_CHALLENGE_INTERVAL = 7;
+const SQUIRREL_IMAGES = ['/squirrel_1.webp', '/squirrel_2.webp', '/squirrel_3.webp'];
+const CELEBRATION_BANNER_TEXT = 'Well Done Shira!';
 
 
 const clampDimension = (value, fallback) => {
@@ -16,7 +18,7 @@ const clampDimension = (value, fallback) => {
   if (!Number.isFinite(parsed)) {
     parsed = MAX_DIM;
   }
-  return Math.max(MIN_DIM, Math.min(parsed, MAX_DIM)); 
+  return Math.max(MIN_DIM, Math.min(parsed, MAX_DIM));
 };
 
 function Maze({
@@ -42,7 +44,10 @@ function Maze({
   const [pendingMove, setPendingMove] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [questionError, setQuestionError] = useState('');
+  const [isShaking, setIsShaking] = useState(false);
+  const [squirrelImage, setSquirrelImage] = useState(SQUIRREL_IMAGES[0] ?? '');
   const confettiTimeoutRef = useRef(null);
+  const badMoveTimeoutRef = useRef(null);
 
   const dimensions = useMemo(() => {
     return {
@@ -104,7 +109,21 @@ function Maze({
     }));
   };
 
+  const triggerBadMove = () => {
+    if (badMoveTimeoutRef.current) {
+      clearTimeout(badMoveTimeoutRef.current);
+    }
+    setIsShaking(true);
+    badMoveTimeoutRef.current = setTimeout(() => {
+      setIsShaking(false);
+    }, 500);
+  };
+
   const triggerConfetti = () => {
+    if (SQUIRREL_IMAGES.length > 0) {
+      const nextIndex = Math.floor(Math.random() * SQUIRREL_IMAGES.length);
+      setSquirrelImage(SQUIRREL_IMAGES[nextIndex]);
+    }
     setShowConfetti(true);
     setConfettiPieces(createConfettiPieces());
     if (confettiTimeoutRef.current) {
@@ -119,6 +138,9 @@ function Maze({
     return () => {
       if (confettiTimeoutRef.current) {
         clearTimeout(confettiTimeoutRef.current);
+      }
+      if (badMoveTimeoutRef.current) {
+        clearTimeout(badMoveTimeoutRef.current);
       }
     };
   }, []);
@@ -149,86 +171,109 @@ function Maze({
     setStepCount((prev) => prev + 1);
   };
 
-  const tryMove = (direction) => {
+  const tryMove = (direction, moves = 1) => {
     if (mazeGrid.length === 0 || activeQuestion) {
       return;
     }
-    const { row, column } = currentCell;
-    const cell = mazeGrid[row]?.[column];
-    if (!cell) {
-      return;
-    }
+    let { row, column } = currentCell;
+    let visited = [];
 
-    let targetRow = row;
-    let targetColumn = column;
-
-    switch (direction) {
-      case 'ArrowUp':
-        if (!cell.walls.top && row > 0) {
-          targetRow -= 1;
-        }
-        break;
-      case 'ArrowDown':
-        if (!cell.walls.bottom && row < mazeGrid.length - 1) {
-          targetRow += 1;
-        }
-        break;
-      case 'ArrowLeft':
-        if (!cell.walls.left && column > 0) {
-          targetColumn -= 1;
-        }
-        break;
-      case 'ArrowRight':
-        if (!cell.walls.right && column < mazeGrid[0].length - 1) {
-          targetColumn += 1;
-        }
-        break;
-      default:
-        break;
-    }
-
-    if (targetRow !== row || targetColumn !== column) {
-      const nextStep = stepCount + 1;
-      if (challengeInterval > 0 && nextStep % challengeInterval === 0) {
-        const question = QUESTION_BANK[questionCursor % QUESTION_BANK.length];
-        setActiveQuestion(question);
-        setQuestionCursor((prev) => prev + 1);
-        setPendingMove({ row: targetRow, column: targetColumn });
-        setSelectedAnswer('');
-        setQuestionError('');
+    while (moves >= 1) {
+      let cell = mazeGrid[row]?.[column];
+      visited.push(cell);
+      if (!cell) {
+        triggerBadMove()
         return;
       }
-      completeMove(targetRow, targetColumn);
+      let moved = false;
+      switch (direction) {
+        case 'ArrowUp':
+          if (!cell.walls.top && row > 0) {
+            row -= 1;
+            moved = true;
+          }
+          break;
+        case 'ArrowDown':
+          if (!cell.walls.bottom && row < mazeGrid.length - 1) {
+            row += 1;
+            moved = true;
+          }
+          break;
+        case 'ArrowLeft':
+          if (!cell.walls.left && column > 0) {
+            column -= 1;
+            moved = true;
+          }
+          break;
+        case 'ArrowRight':
+          if (!cell.walls.right && column < mazeGrid[0].length - 1) {
+            column += 1;
+            moved = true;
+          }
+          break;
+        default:
+          break;
+      }
+      if (!moved) {
+        triggerBadMove();
+        return;
+      }
+      moves -= 1;
     }
+
+    const nextStep = stepCount + 1;
+    if (challengeInterval > 0 && nextStep % challengeInterval === 0) {
+      const question = QUESTION_BANK[questionCursor % QUESTION_BANK.length];
+      setActiveQuestion(question);
+      setQuestionCursor((prev) => prev + 1);
+      setPendingMove({ row, column });
+      setSelectedAnswer('');
+      setQuestionError('');
+      return;
+    }
+    completeMove(row, column);
+    for (const c of visited) {
+      markVisited(c.row, c.column);
+    }
+
   };
 
   const handleKeyDown = (event) => {
+    console.log('handleKeyDown', event);
     const directions = new Set(['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft']);
     if (activeQuestion || !directions.has(event.key)) {
       return;
     }
     event.preventDefault();
-    tryMove(event.key);
+    tryMove(event.key, 1);
   };
 
   const handleCellClick = (row, column) => {
+    console.log('handleCellClick', row, column);
     if (mazeGrid.length === 0 || activeQuestion) {
       return;
     }
     const rowDiff = row - currentCell.row;
     const colDiff = column - currentCell.column;
-    if (Math.abs(rowDiff) + Math.abs(colDiff) !== 1) {
-      return;
-    }
 
-    if (rowDiff === -1) {
-      tryMove('ArrowUp');
-    } else if (rowDiff === 1) {
-      tryMove('ArrowDown');
-    } else if (colDiff === -1) {
-      tryMove('ArrowLeft');
-    } else if (colDiff === 1) {
-      tryMove('ArrowRight');
+    if (rowDiff === 0) {
+      if (colDiff > 0) {
+        tryMove('ArrowRight', colDiff);
+      } else if (colDiff < 0) {
+        tryMove('ArrowLeft', -colDiff)
+      } else {
+        triggerBadMove();
+      }
+    } else if (colDiff === 0) {
+      if (rowDiff > 0) {
+        tryMove('ArrowDown', rowDiff)
+      } else if (rowDiff < 0) {
+        tryMove('ArrowUp', -rowDiff)
+      } else { // just for completenes but it shouldnt really get here 
+        triggerBadMove();
+      }
+    } else {
+      triggerBadMove();
     }
   };
 
@@ -273,6 +318,16 @@ function Maze({
               }}
             />
           ))}
+          {squirrelImage && (
+            <img
+              src={squirrelImage}
+              alt="Dancing squirrel"
+              className="confetti-squirrel"
+            />
+          )}
+          <div className="confetti-banner">
+            <span>{CELEBRATION_BANNER_TEXT}</span>
+          </div>
         </div>
       )}
 
@@ -340,12 +395,12 @@ function Maze({
                 </div>
               </div>
             </div>
-            <h1>Maze Generator</h1>
+            <h1>Shira's Maze Game</h1>
           </div>
         </header>
 
         <section className="maze-content">
-          <section className="maze-output">
+          <section className={`maze-output ${isShaking ? 'is-shaking' : ''}`}>
             <div className="maze-meta">
               <p>
                 Size: {dimensions.rows} × {dimensions.cols}
@@ -372,11 +427,10 @@ function Maze({
                         {row.map((cell) => (
                           <td
                             key={`maze-cell-${cell.row}-${cell.column}`}
-                            className={`maze-cell${visitedCells.has(getCellKey(cell.row, cell.column)) ? ' is-visited' : ''}${
-                              currentCell.row === cell.row && currentCell.column === cell.column
+                            className={`maze-cell${visitedCells.has(getCellKey(cell.row, cell.column)) ? ' is-visited' : ''}${currentCell.row === cell.row && currentCell.column === cell.column
                                 ? ' is-current'
                                 : ''
-                            }`}
+                              }`}
                             style={{
                               '--wall-top': cell.walls.top ? 'var(--maze-wall)' : 'transparent',
                               '--wall-right': cell.walls.right ? 'var(--maze-wall)' : 'transparent',
@@ -409,9 +463,8 @@ function Maze({
                     {activeQuestion.choices.map((choice) => (
                       <label
                         key={`${activeQuestion.id}-${choice}`}
-                        className={`question-option ${
-                          selectedAnswer === String(choice) ? 'is-selected' : ''
-                        }`}
+                        className={`question-option ${selectedAnswer === String(choice) ? 'is-selected' : ''
+                          }`}
                       >
                         <input
                           type="radio"
