@@ -8,8 +8,8 @@ const DEFAULT_COLS = 8;
 const MIN_DIM = 4;
 const MAX_DIM = 40;
 const QUESTION_BANK = createQuestionBank();
-const DEFAULT_CHALLENGE_INTERVAL = 7;
-const SQUIRREL_IMAGES = ['/squirrel_1.webp', '/squirrel_2.webp', '/squirrel_3.webp'];
+const DEFAULT_CHALLENGE_INTERVAL = 6;
+const SQUIRREL_IMAGES = ['/squirrel_1.webp', '/squirrel_2.webp', '/squirrel_3.webp', '/squirrel_4.webp', '/squirrel_5.webp', '/squirrel_6.webp', '/squirrel_7.webp', '/squirrel_8.webp'];
 const CELEBRATION_BANNER_TEXT = 'Well Done Shira!';
 
 
@@ -131,7 +131,7 @@ function Maze({
     }
     confettiTimeoutRef.current = setTimeout(() => {
       setShowConfetti(false);
-    }, 3200);
+    }, 6000);
   };
 
   useEffect(() => {
@@ -221,6 +221,10 @@ function Maze({
       moves -= 1;
     }
 
+    for (const c of visited) {
+      markVisited(c.row, c.column);
+    }
+
     const nextStep = stepCount + 1;
     if (challengeInterval > 0 && nextStep % challengeInterval === 0) {
       const question = QUESTION_BANK[questionCursor % QUESTION_BANK.length];
@@ -232,9 +236,6 @@ function Maze({
       return;
     }
     completeMove(row, column);
-    for (const c of visited) {
-      markVisited(c.row, c.column);
-    }
 
   };
 
