@@ -8,7 +8,8 @@ const DEFAULT_COLS = 8;
 const MIN_DIM = 4;
 const MAX_DIM = 40;
 const QUESTION_BANK = createQuestionBank();
-const DEFAULT_CHALLENGE_INTERVAL = 6;
+const DEFAULT_CHALLENGE_INTERVAL_MIN = 2;
+const DEFAULT_CHALLENGE_INTERVAL_MAX = 6;
 const SQUIRREL_IMAGES = ['/squirrel_1.webp', '/squirrel_2.webp', '/squirrel_3.webp', '/squirrel_4.webp', '/squirrel_5.webp', '/squirrel_6.webp', '/squirrel_7.webp', '/squirrel_8.webp'];
 const CELEBRATION_BANNER_TEXT = 'Well Done Shira!';
 
@@ -16,20 +17,29 @@ const CELEBRATION_BANNER_TEXT = 'Well Done Shira!';
 const clampDimension = (value, fallback) => {
   let parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed)) {
-    parsed = MAX_DIM;
+    parsed = fallback;
   }
   return Math.max(MIN_DIM, Math.min(parsed, MAX_DIM));
+};
+
+const clampIntervalValue = (value, fallback) => {
+  let parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) {
+    parsed = fallback;
+  }
+  return Math.max(1, parsed);
 };
 
 function Maze({
   initialRows = DEFAULT_ROWS,
   initialCols = DEFAULT_COLS,
   initialSeed = '',
-  challengeInterval = DEFAULT_CHALLENGE_INTERVAL,
 }) {
   const [rowsInput, setRowsInput] = useState(String(initialRows));
   const [colsInput, setColsInput] = useState(String(initialCols));
   const [seedInput, setSeedInput] = useState(initialSeed);
+  const [minIntervalInput, setMinIntervalInput] = useState(String(DEFAULT_CHALLENGE_INTERVAL_MIN));
+  const [maxIntervalInput, setMaxIntervalInput] = useState(String(DEFAULT_CHALLENGE_INTERVAL_MAX));
   const [mazeGrid, setMazeGrid] = useState([]);
   const [error, setError] = useState('');
   const [controlsOpen, setControlsOpen] = useState(false);
@@ -38,6 +48,7 @@ function Maze({
   const [hasWon, setHasWon] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiPieces, setConfettiPieces] = useState([]);
+  const [challengeInterval, setChallengeInterval] = useState(DEFAULT_CHALLENGE_INTERVAL_MIN);
   const [stepCount, setStepCount] = useState(0);
   const [activeQuestion, setActiveQuestion] = useState(null);
   const [questionCursor, setQuestionCursor] = useState(0);
@@ -48,6 +59,8 @@ function Maze({
   const [squirrelImage, setSquirrelImage] = useState(SQUIRREL_IMAGES[0] ?? '');
   const confettiTimeoutRef = useRef(null);
   const badMoveTimeoutRef = useRef(null);
+  const controlsPanelRef = useRef(null);
+  const controlsToggleRef = useRef(null);
 
   const dimensions = useMemo(() => {
     return {
@@ -58,11 +71,17 @@ function Maze({
 
   const handleGenerate = () => {
     try {
+      const minInterval = clampIntervalValue(minIntervalInput, DEFAULT_CHALLENGE_INTERVAL_MIN);
+      const maxInterval = Math.max(minInterval, clampIntervalValue(maxIntervalInput, DEFAULT_CHALLENGE_INTERVAL_MAX));
+      const intervalSpan = maxInterval - minInterval + 1;
+      const nextInterval = minInterval + Math.floor(Math.random() * intervalSpan);
+
       const maze = new RectMaze(dimensions.rows, dimensions.cols);
       const seed = seedInput.trim();
       maze.generate(seed === '' ? null : seed);
       const grid = maze.toCellGrid();
       setMazeGrid(grid);
+      setChallengeInterval(nextInterval);
       setCurrentCell({ row: 0, column: 0 });
       setVisitedCells(new Set(['0-0']));
       setHasWon(false);
@@ -79,6 +98,7 @@ function Maze({
       setVisitedCells(new Set());
       setHasWon(false);
       setShowConfetti(false);
+      setChallengeInterval(DEFAULT_CHALLENGE_INTERVAL_MIN);
       setStepCount(0);
       setActiveQuestion(null);
       setPendingMove(null);
@@ -144,6 +164,26 @@ function Maze({
       }
     };
   }, []);
+
+  useEffect(() => {
+    const handleClickAway = (event) => {
+      if (!controlsOpen) {
+        return;
+      }
+      const toggleEl = controlsToggleRef.current;
+      const panelEl = controlsPanelRef.current;
+      if (toggleEl?.contains(event.target) || panelEl?.contains(event.target)) {
+        return;
+      }
+      setControlsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickAway);
+    document.addEventListener('touchstart', handleClickAway);
+    return () => {
+      document.removeEventListener('mousedown', handleClickAway);
+      document.removeEventListener('touchstart', handleClickAway);
+    };
+  }, [controlsOpen]);
 
   const markVisited = (row, column) => {
     setVisitedCells((prev) => {
@@ -349,6 +389,7 @@ function Maze({
                   onClick={handleToggleControls}
                   aria-controls="maze-controls-panel"
                   aria-expanded={controlsOpen}
+                  ref={controlsToggleRef}
                 >
                   <span className="hamburger" aria-hidden="true">
                     <span />
@@ -357,7 +398,7 @@ function Maze({
                   </span>
                   <span className="toggle-label">Controls</span>
                 </button>
-                <div className={controlsPanelClassName} id="maze-controls-panel">
+                <div className={controlsPanelClassName} id="maze-controls-panel" ref={controlsPanelRef}>
                   <section className="maze-controls">
                     <label>
                       Rows
@@ -388,9 +429,27 @@ function Maze({
                         placeholder="Random each time"
                       />
                     </label>
-                    <button type="button" onClick={handleGenerate}>
-                      Generate Maze
-                    </button>
+                    <label className="question-rate">
+                      Questions Rate
+                    </label>
+                    <label>
+                      Min
+                      <input
+                        type="number"
+                        min="1"
+                        value={minIntervalInput}
+                        onChange={(event) => setMinIntervalInput(event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Max
+                      <input
+                        type="number"
+                        min={minIntervalInput || 1}
+                        value={maxIntervalInput}
+                        onChange={(event) => setMaxIntervalInput(event.target.value)}
+                      />
+                    </label>
                   </section>
                   {error && <p className="maze-error">{error}</p>}
                 </div>
@@ -406,12 +465,9 @@ function Maze({
               <p>
                 Size: {dimensions.rows} × {dimensions.cols}
               </p>
-              <p>
-                Seed:{' '}
-                {seedInput.trim() === ''
-                  ? 'Random'
-                  : `"${seedInput.trim()}"`}
-              </p>
+              <button type="button" className="generate-button" onClick={handleGenerate}>
+                Generate Maze
+              </button>
             </div>
             <div
               className="maze-grid-wrapper"

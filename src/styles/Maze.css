@@ -151,10 +151,12 @@
 }
 
 
+
 .maze-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  column-gap: 12px;
+  row-gap: 10px;
   padding: 0;
 }
 
@@ -164,8 +166,11 @@
   gap: 4px;
   font-weight: 600;
   color: #ec4899;
-  flex: 1 1 120px;
   font-size: 0.85rem;
+}
+
+.maze-controls .question-rate {
+  grid-column: 1 / -1;
 }
 
 .maze-controls input {
@@ -216,13 +221,33 @@
 
 .maze-meta {
   display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
   font-weight: 600;
   color: #9d174d;
   margin-bottom: 12px;
 }
 
+
+.generate-button {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(90deg, #f9a8d4, #c084fc);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+  font-size: 0.85rem;
+  max-width: 150px;
+}
+
+.generate-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+}
 
 .maze-error {
   color: #be123c;
@@ -313,25 +338,36 @@
 
 .question-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
   margin-bottom: 12px;
 }
 
 .question-option {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 8px;
+  column-gap: 4px;
+  min-height: 44px;
+  padding: 1px 1px 1px 1px;
+  width: 100%;
+  box-sizing: border-box;
   background: rgba(252, 231, 243, 0.8);
   border: 1px solid rgba(236, 72, 153, 0.25);
   border-radius: 10px;
-  padding: 6px 10px;
   cursor: pointer;
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .question-option input {
   accent-color: var(--accent);
+  justify-self: start;
+}
+
+.question-option span {
+  font-size: 1rem;
+  color: #4a044e;
+  text-align: left;
 }
 
 .question-option.is-selected {
@@ -353,6 +389,16 @@
   margin: 8px 0 0;
   color: #fecaca;
   font-weight: 600;
+}
+
+@media (max-width: 430px) {
+  .maze-question-panel {
+    width: 100%;
+  }
+
+  .question-options {
+    grid-template-columns: 1fr;
+  }
 }
 
 .confetti-overlay {
@@ -383,6 +429,7 @@
   filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.25));
   transform: translate(-50%, -50%);
   animation: squirrelBounce 1.3s ease-in-out infinite;
+  z-index: 2;
 }
 
 .confetti-banner {
@@ -402,6 +449,7 @@
   box-shadow: 0 12px 30px rgba(249, 168, 212, 0.4);
   animation: bannerGlide 6s linear infinite;
   font-size: clamp(1rem, 4vw, 1.4rem);
+  z-index: 1;
 }
 
 .confetti-banner span {
