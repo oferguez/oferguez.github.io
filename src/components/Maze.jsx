@@ -8,7 +8,7 @@ const DEFAULT_COLS = 8;
 const MIN_DIM = 4;
 const MAX_DIM = 40;
 const QUESTION_BANK = createQuestionBank();
-const DEFAULT_CHALLENGE_INTERVAL = 6;
+const DEFAULT_CHALLENGE_INTERVAL = 2;
 const SQUIRREL_IMAGES = ['/squirrel_1.webp', '/squirrel_2.webp', '/squirrel_3.webp', '/squirrel_4.webp', '/squirrel_5.webp', '/squirrel_6.webp', '/squirrel_7.webp', '/squirrel_8.webp'];
 const CELEBRATION_BANNER_TEXT = 'Well Done Shira!';
 
