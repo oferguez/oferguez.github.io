@@ -8,8 +8,8 @@ const DEFAULT_COLS = 8;
 const MIN_DIM = 4;
 const MAX_DIM = 40;
 const QUESTION_BANK = createQuestionBank();
-const DEFAULT_CHALLENGE_INTERVAL_MIN = 2;
-const DEFAULT_CHALLENGE_INTERVAL_MAX = 6;
+const DEFAULT_CHALLENGE_INTERVAL_MIN = 3;
+const DEFAULT_CHALLENGE_INTERVAL_MAX = 5;
 const SQUIRREL_IMAGES = ['/squirrel_1.webp', '/squirrel_2.webp', '/squirrel_3.webp', '/squirrel_4.webp', '/squirrel_5.webp', '/squirrel_6.webp', '/squirrel_7.webp', '/squirrel_8.webp'];
 const CELEBRATION_BANNER_TEXT = 'Well Done Shira!';
 
@@ -552,8 +552,8 @@ export default Maze;
 
 function createQuestionBank() {
   const additions = [];
-  for (let a = 0; a <= 20; a += 1) {
-    for (let b = 0; b <= 20; b += 1) {
+  for (let a = 50; a <= 70; a += 1) {
+    for (let b = 30; b <= 50; b += 1) {
       if (a + b <= 20) {
         additions.push({ a, b, op: '+' });
       }
@@ -561,8 +561,8 @@ function createQuestionBank() {
   }
 
   const subtractions = [];
-  for (let a = 0; a <= 20; a += 1) {
-    for (let b = 0; b <= a; b += 1) {
+  for (let a = 50; a <= 70; a += 1) {
+    for (let b = 30; b <= a; b += 1) {
       const result = a - b;
       if (result >= 0 && result <= 20) {
         subtractions.push({ a, b, op: '-' });

@@ -425,7 +425,7 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: min(200px, 32vw);
+  width: min(4000px, 32vw);
   filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.25));
   transform: translate(-50%, -50%);
   animation: squirrelBounce 1.3s ease-in-out infinite;
