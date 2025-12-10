@@ -138,3 +138,12 @@ public/
 - [X] Add recursive “available sublinks” explorer for any URL (a lightweight crawler).
 - [ ] SEO
 - [X] visitor analytics to better understand site usage.
+
+## Fixups
+
+- [ ] Squirrel pic size fixed on mobile
+- [X] Dark thick maze walls
+- [X] Proper mix of operations
+- [X] Add mult
+- [ ] Title on mobile
+- [X] Small reward in question dialog

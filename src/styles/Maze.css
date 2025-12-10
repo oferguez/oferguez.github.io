@@ -205,7 +205,7 @@
   border-radius: 24px;
   padding: 20px;
   border: 1px solid rgba(255, 182, 193, 0.4);
-  --maze-wall: rgba(236, 72, 153, 0.35);
+  --maze-wall: rgb(129, 9, 65);
   --maze-cell-current: #f9a8d4;
   --maze-cell-visited: rgba(236, 72, 153, 0.18);
   flex: 1;
@@ -322,12 +322,15 @@
   padding: 16px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
   width: min(360px, 100%);
+  position: relative;
+  overflow: hidden;
 }
 
 .maze-question-panel h3 {
   margin: 0 0 8px;
   color: var(--accent);
   font-size: 1.1rem;
+  text-align: center;
 }
 
 .question-prompt {
@@ -389,6 +392,36 @@
   margin: 8px 0 0;
   color: #fecaca;
   font-weight: 600;
+}
+
+.question-fireworks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.question-firework {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(1);
+  animation: questionFirework 1s ease-out forwards;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
+}
+
+@keyframes questionFirework {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(0.3);
+    opacity: 0;
+  }
 }
 
 @media (max-width: 430px) {

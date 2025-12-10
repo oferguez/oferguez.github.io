@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RectMaze } from '../utils/rectMaze.js';
+import { createQuestionBank } from '../utils/questionBank.js';
 import '../styles/Maze.css';
 
-const DEFAULT_ROWS = 8;
-const DEFAULT_COLS = 8;
+const DEFAULT_ROWS = 10;
+const DEFAULT_COLS = 10;
 const MIN_DIM = 4;
 const MAX_DIM = 40;
 const QUESTION_BANK = createQuestionBank();
@@ -12,6 +13,31 @@ const DEFAULT_CHALLENGE_INTERVAL_MIN = 3;
 const DEFAULT_CHALLENGE_INTERVAL_MAX = 5;
 const SQUIRREL_IMAGES = ['/squirrel_1.webp', '/squirrel_2.webp', '/squirrel_3.webp', '/squirrel_4.webp', '/squirrel_5.webp', '/squirrel_6.webp', '/squirrel_7.webp', '/squirrel_8.webp'];
 const CELEBRATION_BANNER_TEXT = 'Well Done Shira!';
+const FIREWORK_COLORS = ['#f472b6', '#f97316', '#22d3ee', '#a855f7', '#84cc16'];
+const STOP_TITLES = [
+  'Maths pit stop',
+  'Brain break (math)',
+  'Maths snack break',
+  'Number pit lane',
+  'Maths stretch',
+  'Maths breather',
+  'Maths cool-down',
+  'Maths refuel',
+  'Maths halftime',
+  'Maths pit crew',
+];
+const TRY_AGAIN_MESSAGES = [
+  'Nice try, Shira!',
+  'Almost there, Shira!',
+  'Good effort, Shira!',
+  'Great hustle, Shira!',
+  'Keep going, Shira!',
+  'Give it another go.',
+  'Try once more, Shira.',
+  'One more try, Shira!',
+  'You’ve almost got this, Shira!',
+  'Another shot, Shira!',
+];
 
 
 const clampDimension = (value, fallback) => {
@@ -52,13 +78,16 @@ function Maze({
   const [stepCount, setStepCount] = useState(0);
   const [activeQuestion, setActiveQuestion] = useState(null);
   const [questionCursor, setQuestionCursor] = useState(0);
+  const [questionTitle, setQuestionTitle] = useState(STOP_TITLES[0]);
   const [pendingMove, setPendingMove] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState('');
   const [questionError, setQuestionError] = useState('');
   const [isShaking, setIsShaking] = useState(false);
   const [squirrelImage, setSquirrelImage] = useState(SQUIRREL_IMAGES[0] ?? '');
+  const [fireworks, setFireworks] = useState([]);
   const confettiTimeoutRef = useRef(null);
   const badMoveTimeoutRef = useRef(null);
+  const fireworksTimeoutRef = useRef(null);
   const controlsPanelRef = useRef(null);
   const controlsToggleRef = useRef(null);
 
@@ -154,6 +183,36 @@ function Maze({
     }, 6000);
   };
 
+  const triggerFireworks = (onComplete) => {
+    const count = 35 + Math.floor( Math.random() * 20);
+    const burst = Array.from({ length: count }, (_, index) => {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 80 + Math.random() * 80;
+      const size = 5 + Math.random() * 15;
+      const delay = Math.random() * 0.2;
+      const color = FIREWORK_COLORS[index % FIREWORK_COLORS.length];
+      return {
+        id: `fw-${index}-${Date.now()}`,
+        fx: Math.cos(angle) * distance,
+        fy: Math.sin(angle) * distance,
+        size,
+        delay,
+        color,
+      };
+    });
+    setFireworks(burst);
+    if (fireworksTimeoutRef.current) {
+      clearTimeout(fireworksTimeoutRef.current);
+    }
+    fireworksTimeoutRef.current = setTimeout(() => {
+      setFireworks([]);
+      fireworksTimeoutRef.current = null;
+      if (typeof onComplete === 'function') {
+        onComplete();
+      }
+    }, 1000);
+  };
+
   useEffect(() => {
     return () => {
       if (confettiTimeoutRef.current) {
@@ -161,6 +220,9 @@ function Maze({
       }
       if (badMoveTimeoutRef.current) {
         clearTimeout(badMoveTimeoutRef.current);
+      }
+      if (fireworksTimeoutRef.current) {
+        clearTimeout(fireworksTimeoutRef.current);
       }
     };
   }, []);
@@ -268,6 +330,8 @@ function Maze({
     const nextStep = stepCount + 1;
     if (challengeInterval > 0 && nextStep % challengeInterval === 0) {
       const question = QUESTION_BANK[questionCursor % QUESTION_BANK.length];
+      const nextTitle = STOP_TITLES[Math.floor(Math.random() * STOP_TITLES.length)];
+      setQuestionTitle(nextTitle);
       setActiveQuestion(question);
       setQuestionCursor((prev) => prev + 1);
       setPendingMove({ row, column });
@@ -323,7 +387,7 @@ function Maze({
   };
 
   const handleAnswerSubmit = () => {
-    if (!activeQuestion || !pendingMove) {
+    if (!activeQuestion || !pendingMove || fireworks.length > 0) {
       return;
     }
     if (selectedAnswer === '') {
@@ -332,15 +396,18 @@ function Maze({
     }
     const numericAnswer = Number(selectedAnswer);
     if (numericAnswer !== activeQuestion.answer) {
-      setQuestionError('Not quite. Try again!');
+      const messageIndex = Math.floor(Math.random() * TRY_AGAIN_MESSAGES.length);
+      setQuestionError(TRY_AGAIN_MESSAGES[messageIndex]);
       return;
     }
-    setQuestionError('');
+    setQuestionError('Well done, Shira!');
     const { row, column } = pendingMove;
-    setActiveQuestion(null);
-    setPendingMove(null);
-    setSelectedAnswer('');
-    completeMove(row, column);
+    triggerFireworks(() => {
+      setActiveQuestion(null);
+      setPendingMove(null);
+      setSelectedAnswer('');
+      completeMove(row, column);
+    });
   };
 
   return (
@@ -509,14 +576,32 @@ function Maze({
               <div
                 className="maze-question-overlay"
                 role="dialog"
-                aria-modal="true"
-                aria-live="polite"
-                aria-label="Checkpoint challenge"
-              >
-                <div className="maze-question-panel">
-                  <h3>Checkpoint challenge</h3>
-                  <p className="question-prompt">{activeQuestion.prompt}</p>
-                  <div className="question-options">
+              aria-modal="true"
+              aria-live="polite"
+              aria-label="Checkpoint challenge"
+            >
+              <div className="maze-question-panel">
+                {fireworks.length > 0 && (
+                  <div className="question-fireworks" aria-hidden="true">
+                    {fireworks.map((spark) => (
+                      <span
+                        key={spark.id}
+                        className="question-firework"
+                        style={{
+                          '--fx': `${spark.fx}px`,
+                          '--fy': `${spark.fy}px`,
+                          animationDelay: `${spark.delay}s`,
+                          width: `${spark.size}px`,
+                          height: `${spark.size}px`,
+                          backgroundColor: spark.color,
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+                <h3>{questionTitle}</h3>
+                <p className="question-prompt">{activeQuestion.prompt}</p>
+                <div className="question-options">
                     {activeQuestion.choices.map((choice) => (
                       <label
                         key={`${activeQuestion.id}-${choice}`}
@@ -549,57 +634,3 @@ function Maze({
 }
 
 export default Maze;
-
-function createQuestionBank() {
-  const additions = [];
-  for (let a = 50; a <= 70; a += 1) {
-    for (let b = 30; b <= 50; b += 1) {
-      if (a + b <= 20) {
-        additions.push({ a, b, op: '+' });
-      }
-    }
-  }
-
-  const subtractions = [];
-  for (let a = 50; a <= 70; a += 1) {
-    for (let b = 30; b <= a; b += 1) {
-      const result = a - b;
-      if (result >= 0 && result <= 20) {
-        subtractions.push({ a, b, op: '-' });
-      }
-    }
-  }
-
-  const additionSet = shuffle(additions).slice(0, 20);
-  const subtractionSet = shuffle(subtractions).slice(0, 20);
-  return [...additionSet, ...subtractionSet].map((item, index) => createQuestion(item, index));
-}
-
-function createQuestion({ a, b, op }, index) {
-  const answer = op === '+' ? a + b : a - b;
-  const operatorSymbol = op === '+' ? '+' : '−';
-  const prompt = `${a} ${operatorSymbol} ${b} = ?`;
-  const distractors = new Set();
-  while (distractors.size < 3) {
-    const candidate = Math.floor(Math.random() * 21);
-    if (candidate !== answer) {
-      distractors.add(candidate);
-    }
-  }
-  const choices = shuffle([answer, ...distractors]);
-  return {
-    id: `q-${index}`,
-    prompt,
-    answer,
-    choices,
-  };
-}
-
-function shuffle(list) {
-  const array = [...list];
-  for (let i = array.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-}
