@@ -146,4 +146,5 @@ public/
 - [X] Proper mix of operations
 - [X] Add mult
 - [ ] Title on mobile
+- [ ] square size on mobile 
 - [X] Small reward in question dialog

@@ -444,6 +444,7 @@ function Maze({
           <Link to="/" className="home-link">
             ← Back to landing
           </Link>
+          <h1 className="maze-title">Shira's Maze Game</h1>
         </div>
 
         <header className="maze-header">
@@ -522,7 +523,6 @@ function Maze({
                 </div>
               </div>
             </div>
-            <h1>Shira's Maze Game</h1>
           </div>
         </header>
 
