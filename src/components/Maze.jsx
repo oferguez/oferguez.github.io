@@ -440,13 +440,6 @@ function Maze({
       )}
 
       <div className="maze-container container">
-        <div className="header-nav">
-          <Link to="/" className="home-link">
-            <span className='home-link-label'>← Back to landing</span>
-            <span className='home-link-label--short'>← Back</span>
-          </Link>
-          <h1 className="maze-title">Shira's Maze Game</h1>
-        </div>
 
         <header className="maze-header">
           <div className="maze-header-row">
@@ -524,6 +517,11 @@ function Maze({
                 </div>
               </div>
             </div>
+            <h1 className="maze-title">Shira's Mazes</h1>
+            <Link to="/" className="home-link">
+              <span className='home-link-label'>Back to landing</span>
+              <span className='home-link-label--short'>Landing</span>
+            </Link>
           </div>
         </header>
 
