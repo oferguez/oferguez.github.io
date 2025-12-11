@@ -53,16 +53,31 @@
   text-align: center;
 }
 
+.home-link .home-link-label--short { display: none; }
+
 @media (max-width: 640px) {
   .header-nav {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
     gap: 8px;
+    width: 100%;
+  }
+
+  .header-nav .home-link {
+    flex-shrink: 0;
+    padding: 8px 12px;
   }
 
   .maze-title {
-    width: 100%;
+    margin-left: auto;
+    text-align: center;
+    flex: 1;
   }
+
+  .home-link .home-link-label { display: none; }
+  .home-link .home-link-label--short { display: inline; }
 }
 
 .maze-header {
