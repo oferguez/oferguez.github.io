@@ -95,6 +95,16 @@
   .maze-title {
     font-size: 4vw;
   }
+
+  /* Allow wide mazes to scroll horizontally instead of shrinking cells */
+  .maze-grid-wrapper {
+    overflow-x: auto;
+  }
+
+  .maze-grid {
+    max-width: none;
+    width: auto;
+  }
 }
 
 .maze-content {
@@ -338,6 +348,20 @@
 .maze-cell.is-current {
   background: var(--maze-cell-current);
   box-shadow: 0 0 14px rgba(244, 114, 182, 0.45);
+}
+
+@media (max-width: 640px) {
+  /* Let wide mazes scroll instead of shrinking cells */
+  .maze-grid-wrapper {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .maze-grid {
+    max-width: none;
+    width: auto;
+    flex: 0 0 auto;
+  }
 }
 
 .maze-placeholder {
