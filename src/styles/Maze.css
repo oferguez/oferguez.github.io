@@ -465,7 +465,7 @@
   border-radius: 50%;
   opacity: 0;
   transform: translate(-50%, -50%) scale(1);
-  animation: questionFirework 1s ease-out forwards;
+  animation: questionFirework 0.75s ease-out forwards;
   box-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
 }
 

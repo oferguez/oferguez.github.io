@@ -191,6 +191,7 @@ function Maze({
       const size = 5 + Math.random() * 15;
       const delay = Math.random() * 0.2;
       const color = FIREWORK_COLORS[index % FIREWORK_COLORS.length];
+      const length = 0.4 + Math.random() * 0.3
       return {
         id: `fw-${index}-${Date.now()}`,
         fx: Math.cos(angle) * distance,

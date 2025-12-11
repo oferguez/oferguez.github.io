@@ -11,9 +11,16 @@ function createQuestion({ a, b, op }, index) {
   const answer = op === '+' ? a + b : op === '-' ? a - b : a * b;
   const prompt = `${a} ${op} ${b} = ?`;
   const distractors = new Set();
-  const range = Math.floor(6 + 0.8 * answer);
+  const range = Math.floor(10 + 0.8 * answer); // bound by 10, in case the answer is very small
   while (distractors.size < 3) {
-    const candidate = Math.abs(Math.floor((Math.random() - 0.5) * range) + answer);
+    let candidate = Math.abs(Math.floor((Math.random() - 0.5) * range) + answer);
+    if (range > 50) {
+      // try and have the distractors with the same last digit as the answer, 
+      // so it will be less easy to guess up
+      const candidate_same_last_digit = candidate + (answer % 10 - candidate % 10) 
+      if (!distractors.has(candidate_same_last_digit))
+        candidate = candidate_same_last_digit
+    }
     if (candidate !== answer && !distractors.has(candidate)) {
       distractors.add(candidate);
     }
