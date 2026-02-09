@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { LandingPage } from './components/LandingPage';
 import { HebrewMatcher } from './components/HebrewMatcher';
@@ -12,6 +12,14 @@ import './styles/App.css';
 import './styles/HebrewMatcher.css';
 import './styles/EnglishMatcher.css';
 
+function GreenPaprikaRedirect() {
+  useEffect(() => {
+    window.location.replace('/green-paprika/index.html');
+  }, []);
+
+  return null;
+}
+
 function App() {
   return (
     <Router basename="/">
@@ -24,6 +32,7 @@ function App() {
         <Route path="/Recipes" element={<RecipeCollection />} />
         <Route path="/dev" element={<Analytics />} />
         <Route path="/maze" element={<Maze />} />
+        <Route path="/green-paprika/*" element={<GreenPaprikaRedirect />} />
       </Routes>
     </Router>
   );
