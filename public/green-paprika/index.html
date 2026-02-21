@@ -34,6 +34,8 @@
 		}
 	</style>
 	<script>
+		window.GREEN_PAPRIKA_CONTACT_EMAIL = "guez.ofer@gmail.com";
+
 		(function () {
 			var path = window.location.pathname || "";
 			if (path.endsWith("/green-paprika/index.html")) {
@@ -2882,6 +2884,35 @@ table.TableFirstRow
   mso-style-textfill-fill-themecolor:accent6;mso-style-textfill-fill-alpha:
   100.0%;mso-style-textfill-fill-colortransforms:lumm=75000;mso-ansi-language:
   EN-GB'><span style='color:windowtext'>https://tinyurl.com/green-paprika<o:p></o:p></span></span></span></a></p>
+						<p class=MsoBodyText align=center style='margin-left:2.85pt;text-align:center'><span
+								style='mso-bookmark:green-paprika'><span lang=EN-GB style='mso-ansi-language:
+  EN-GB'>
+									<o:p>&nbsp;</o:p>
+								</span></span></p>
+						<p class=MsoBodyText align=center style='margin-left:2.85pt;text-align:center'><span
+								style='mso-bookmark:green-paprika'><span lang=EN-GB
+									style='mso-ansi-language:EN-GB'>For questions or special requests:<o:p></o:p></span></span></p>
+						<p id=greenPaprikaContactEmail class=MsoBodyText align=center
+							style='margin-left:2.85pt;text-align:center'><span style='mso-bookmark:green-paprika'><span
+									lang=EN-GB style='mso-ansi-language:EN-GB'><a id=greenPaprikaEmailLink
+											href="#">Email us</a></span></span></p>
+						<script>
+							(function () {
+								var email = (window.GREEN_PAPRIKA_CONTACT_EMAIL || "").trim();
+								var wrapper = document.getElementById("greenPaprikaContactEmail");
+								var link = document.getElementById("greenPaprikaEmailLink");
+								if (!wrapper || !link) {
+									return;
+								}
+								if (!email) {
+									wrapper.style.display = "none";
+									return;
+								}
+								link.href = "mailto:" + email;
+								link.textContent = "Email: " + email;
+								link.setAttribute("aria-label", "Send email to " + email);
+							})();
+						</script>
 						<p class=MsoBodyText><span style='mso-bookmark:green-paprika'></span><span
 								style='mso-bookmark:green-paprika'><span lang=EN-GB style='font-size:13.0pt;
   mso-bidi-font-size:14.0pt;color:#275317;mso-themecolor:accent6;mso-themeshade:
