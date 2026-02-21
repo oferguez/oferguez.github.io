@@ -34,8 +34,6 @@
 		}
 	</style>
 	<script>
-		window.GREEN_PAPRIKA_CONTACT_EMAIL = "guez.ofer@gmail.com";
-
 		(function () {
 			var path = window.location.pathname || "";
 			if (path.endsWith("/green-paprika/index.html")) {
@@ -2892,27 +2890,28 @@ table.TableFirstRow
 						<p class=MsoBodyText align=center style='margin-left:2.85pt;text-align:center'><span
 								style='mso-bookmark:green-paprika'><span lang=EN-GB
 									style='mso-ansi-language:EN-GB'>For questions or special requests:<o:p></o:p></span></span></p>
-						<p id=greenPaprikaContactEmail class=MsoBodyText align=center
-							style='margin-left:2.85pt;text-align:center'><span style='mso-bookmark:green-paprika'><span
-									lang=EN-GB style='mso-ansi-language:EN-GB'><a id=greenPaprikaEmailLink
-											href="#">Email us</a></span></span></p>
-						<script>
-							(function () {
-								var email = (window.GREEN_PAPRIKA_CONTACT_EMAIL || "").trim();
-								var wrapper = document.getElementById("greenPaprikaContactEmail");
-								var link = document.getElementById("greenPaprikaEmailLink");
-								if (!wrapper || !link) {
-									return;
-								}
-								if (!email) {
-									wrapper.style.display = "none";
-									return;
-								}
-								link.href = "mailto:" + email;
-								link.textContent = "Email: " + email;
-								link.setAttribute("aria-label", "Send email to " + email);
-							})();
-						</script>
+						<form action="https://formspree.io/f/mykdnwpp" method="POST"
+							style='margin:8px 2.85pt 0 2.85pt;text-align:left'>
+							<p class=MsoBodyText style='margin:0 0 6px 0'>
+								<label for=greenPaprikaName>Name</label><br>
+								<input id=greenPaprikaName name=name type=text required style='width:100%;box-sizing:border-box'>
+							</p>
+							<p class=MsoBodyText style='margin:0 0 6px 0'>
+								<label for=greenPaprikaReplyEmail>Email</label><br>
+								<input id=greenPaprikaReplyEmail name=email type=email required
+									style='width:100%;box-sizing:border-box'>
+							</p>
+							<p class=MsoBodyText style='margin:0 0 6px 0'>
+								<label for=greenPaprikaMessage>Message</label><br>
+								<textarea id=greenPaprikaMessage name=message rows=5 required
+									style='width:100%;box-sizing:border-box'></textarea>
+							</p>
+							<input type=hidden name=_subject value="Green Paprika enquiry">
+							<input type=text name=_gotcha style='display:none'>
+							<p class=MsoBodyText style='margin:0;text-align:center'>
+								<button type=submit>Send Enquiry</button>
+							</p>
+						</form>
 						<p class=MsoBodyText><span style='mso-bookmark:green-paprika'></span><span
 								style='mso-bookmark:green-paprika'><span lang=EN-GB style='font-size:13.0pt;
   mso-bidi-font-size:14.0pt;color:#275317;mso-themecolor:accent6;mso-themeshade:
