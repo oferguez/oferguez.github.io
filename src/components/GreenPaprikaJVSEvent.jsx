@@ -127,6 +127,22 @@ export default function GreenPaprikaJVSEvent() {
               >
                 Previous Event
               </a>
+              <a
+                className="gp-social-icon-button"
+                href="https://www.instagram.com/green_paprika_london/"
+                aria-label="Instagram"
+                title="Instagram"
+              >
+                <svg
+                  className="gp-instagram-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <rect x="3.25" y="3.25" width="17.5" height="17.5" rx="5.25" />
+                  <circle cx="12" cy="12" r="4.2" />
+                  <circle cx="17.5" cy="6.7" r="1.1" fill="currentColor" stroke="none" />
+                </svg>
+              </a>
             </div>
           </section>
         </section>
