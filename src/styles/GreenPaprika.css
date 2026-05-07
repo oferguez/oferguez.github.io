@@ -1,0 +1,363 @@
+.gp-page {
+  --gp-paper: #f7e9d5;
+  --gp-card: rgba(255, 252, 247, 0.9);
+  --gp-ink: #2f2417;
+  --gp-muted: #695844;
+  --gp-accent: #7e2e24;
+  --gp-accent-green: #075200;
+  --gp-accent-soft: #ead6c3;
+  --gp-line: rgba(47, 36, 23, 0.14);
+  --gp-shadow: 0 24px 48px rgba(66, 39, 19, 0.12);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.4), transparent 28%),
+    linear-gradient(180deg, #f8eddc 0%, var(--gp-paper) 100%);
+  color: var(--gp-ink);
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.gp-page * {
+  box-sizing: border-box;
+}
+
+.gp-page a {
+  color: inherit;
+}
+
+.gp-shell {
+  width: min(1120px, calc(100% - 24px));
+  margin: 0 auto;
+  padding: 12px 0 22px;
+}
+
+.gp-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.12fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.gp-panel {
+  padding: 20px 26px;
+  border: 1px solid var(--gp-line);
+  border-radius: 20px;
+  background: var(--gp-card);
+  box-shadow: var(--gp-shadow);
+}
+
+.gp-left-column {
+  display: grid;
+  gap: 18px;
+}
+
+.gp-flyer-panel {
+  padding: 10px;
+  border: 1px solid var(--gp-line);
+  border-radius: 20px;
+  background: var(--gp-card);
+  box-shadow: var(--gp-shadow);
+}
+
+.gp-content-panel {
+  padding: 20px 26px 18px;
+  text-align: center;
+}
+
+.gp-kicker {
+  margin: 0 0 8px;
+  color: var(--gp-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.gp-page h1,
+.gp-page h2,
+.gp-page p,
+.gp-page ul {
+  margin-top: 0;
+}
+
+.gp-page h1 {
+  margin-bottom: 8px;
+  /* font-size: clamp(2rem, 4vw, 2.5rem); */
+  font-size: 2rem;
+  line-height: 1.08;
+  max-width: none;
+  color: var(--gp-accent-green);
+}
+
+.gp-page h2 {
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.gp-lede {
+  max-width: 38ch;
+  margin: 0 auto 20px;
+  color: var(--gp-muted);
+  line-height: 1.42;
+  font-size: 0.92rem;
+}
+
+.gp-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid rgba(68, 107, 51, 0.55);
+  border-radius: 14px;
+  align-items: stretch;
+}
+
+.gp-detail-card {
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(126, 46, 36, 0.12);
+}
+
+.gp-detail-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--gp-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gp-detail-value {
+  display: block;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  color: var(--gp-accent-green);
+}
+
+.gp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.gp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.gp-button-secondary {
+  border: 1px solid rgba(126, 46, 36, 0.28);
+  background: #efdcc6;
+  color: var(--gp-ink);
+}
+
+.gp-note,
+.gp-body-copy {
+  color: var(--gp-muted);
+  line-height: 1.42;
+  font-size: 0.9rem;
+}
+
+.gp-note {
+  margin: 0 auto 14px;
+  /* max-width: 52ch; */
+}
+
+.gp-flyer {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+}
+
+.gp-content-block + .gp-content-block {
+  margin-top: 10px;
+}
+
+.gp-section-label {
+  margin-bottom: 4px;
+  color: var(--gp-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.gp-center {
+  color: var(--gp-accent-green);
+  font-size: 2rem;
+}
+
+.gp-menu-list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.gp-menu-list li + li {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gp-line);
+}
+
+.gp-menu-list strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--gp-accent);
+  font-size: 0.84rem;
+}
+
+.gp-menu-list span {
+  color: var(--gp-muted);
+  line-height: 1.38;
+  font-size: 0.88rem;
+}
+
+.gp-menu-note {
+  margin: 0 0 10px;
+}
+
+.gp-inline-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 1px 9px;
+  border: 1px solid rgba(126, 46, 36, 0.22);
+  border-radius: 999px;
+  background: var(--gp-accent-soft);
+  color: var(--gp-ink);
+  text-decoration: none;
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.gp-contact-panel h2 {
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.gp-form label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.gp-form input,
+.gp-form textarea,
+.gp-submit {
+  font: inherit;
+}
+
+.gp-form input,
+.gp-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 7px;
+  border: 1px solid #8e8578;
+  background: #fff;
+  padding: 4px 6px;
+  color: var(--gp-ink);
+  font-size: 0.95rem;
+}
+
+.gp-form textarea {
+  min-height: 106px;
+  resize: vertical;
+}
+
+.gp-form-actions {
+  text-align: center;
+}
+
+.gp-submit {
+  display: inline-block;
+  padding: 3px 9px;
+  background: #f4f4f4;
+  border: 1px solid #777;
+  color: #000;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 860px) {
+  .gp-shell {
+    width: min(100% - 16px, 1100px);
+    padding: 14px 0 20px;
+  }
+
+  .gp-layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .gp-details {
+    grid-template-columns: 1fr;
+  }
+
+  .gp-panel,
+  .gp-content-panel {
+    padding: 16px 18px;
+  }
+
+  .gp-flyer-panel {
+    padding: 7px;
+  }
+
+  .gp-page h1 {
+    font-size: clamp(1.6rem, 7vw, 2.1rem);
+  }
+
+  .gp-button {
+    width: 100%;
+  }
+
+  .gp-note,
+  .gp-lede {
+    max-width: none;
+  }
+
+  .gp-note,
+  .gp-body-copy,
+  .gp-menu-list span {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .gp-shell {
+    padding: 10px 0 16px;
+  }
+
+  .gp-details {
+    padding: 8px;
+  }
+
+  .gp-detail-card {
+    padding: 8px;
+  }
+
+  .gp-note,
+  .gp-body-copy,
+  .gp-menu-list span {
+    font-size: 0.9rem;
+  }
+
+  .gp-inline-button {
+    margin-left: 4px;
+    padding: 1px 8px;
+  }
+}
