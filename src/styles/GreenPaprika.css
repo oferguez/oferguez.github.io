@@ -160,6 +160,31 @@
   color: var(--gp-ink);
 }
 
+.gp-social-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(126, 46, 36, 0.28);
+  border-radius: 12px;
+  background: #efdcc6;
+  color: #6d4b3c;
+  text-decoration: none;
+}
+
+.gp-instagram-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.gp-instagram-icon rect,
+.gp-instagram-icon circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
 .gp-note,
 .gp-body-copy {
   color: var(--gp-muted);
