@@ -5,7 +5,7 @@ const e = React.createElement;
 const eventDetails = [
   { label: 'Date', value: 'Tuesday, 2 June 2026' },
   { label: 'Time', value: '19:00' },
-  { label: 'Location', value: 'TBC' },  
+  { label: 'Location', value: 'TBC' },
 ];
 
 const menuItems = [
@@ -17,7 +17,7 @@ const menuItems = [
   {
     title: 'Goulash of mushrooms, root vegetables and seitan',
     description:
-      'Served with nokedli, Hungarian dumplings, and cashew sour cream.',
+      'Served with nokedli (Hungarian dumplings), and cashew sour cream.',
   },
   {
     title: 'Chocolate and chestnut mousse',
@@ -132,14 +132,14 @@ export function GreenPaprikaJVSEvent() {
           'p',
           { className: 'gp-note' },
           [
-            'Spaces are limited to 10 so early booking is recommended. The exact Golders Green location is confirmed when booking. Book here: ',
+            'Spaces are limited to 10 so early booking is recommended. The exact Golders Green location is confirmed when booking. Book here:',
             e(
               'a',
               {
-                className: 'gp-inline-link',
+                className: 'gp-inline-button',
                 href: 'https://tickets.jvs.org.uk/events/green-paprika-hungarian-supper',
               },
-              'tickets.jvs.org.uk/events/green-paprika-hungarian-supper',
+              'Reserve',
             ),
           ],
         ),
@@ -147,6 +147,11 @@ export function GreenPaprikaJVSEvent() {
           'section',
           { className: 'gp-content-block' },
           e('p', { className: 'gp-section-label gp-center' }, 'Menu'),
+          e(
+            'p',
+            { className: 'gp-body-copy' },
+            'Gluten free options are available, please let us know at least a week in advance.',
+          ),
           e(
             'ul',
             { className: 'gp-menu-list' },
@@ -164,16 +169,10 @@ export function GreenPaprikaJVSEvent() {
           'section',
           { className: 'gp-content-block' },
           e('p', { className: 'gp-section-label gp-center' }, 'About'),
-          e('h2', null, 'Green Paprika'),
           e(
             'p',
             { className: 'gp-body-copy' },
             'Green Paprika is a vegan pop-up and takeaway kitchen in London, bringing traditional Hungarian dishes to life as generous, comforting plant-based food.',
-          ),
-          e(
-            'p',
-            { className: 'gp-body-copy' },
-            'Gluten free options are available, but please let us know at least a week in advance.',
           ),
         ),
         e(
