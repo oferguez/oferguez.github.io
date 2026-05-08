@@ -36,18 +36,21 @@ function DetailCard({ label, value }) {
 export default function GreenPaprikaJVSEvent() {
   useEffect(() => {
     const previousTitle = document.title;
-    const metaDescription = document.querySelector('meta[name="description"]');
+    let metaDescription = document.querySelector('meta[name="description"]');
     const previousDescription = metaDescription?.getAttribute('content') ?? null;
     let canonicalLink = document.querySelector('link[rel="canonical"]');
     const previousCanonical = canonicalLink?.getAttribute('href') ?? null;
 
     document.title = 'Green Paprika | London Vegan Hungarian Pop-Up & Takeaway';
-    if (metaDescription) {
-      metaDescription.setAttribute(
-        'content',
-        'Green Paprika is a London vegan Hungarian pop-up and takeaway kitchen offering plant-based Hungarian food through supper events, popup collaborations, and takeaway across London.',
-      );
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      document.head.appendChild(metaDescription);
     }
+    metaDescription.setAttribute(
+      'content',
+      'Green Paprika is a London vegan Hungarian pop-up and takeaway kitchen offering plant-based Hungarian food through supper events, popup collaborations, and takeaway across London.',
+    );
     if (!canonicalLink) {
       canonicalLink = document.createElement('link');
       canonicalLink.setAttribute('rel', 'canonical');
@@ -57,8 +60,12 @@ export default function GreenPaprikaJVSEvent() {
 
     return () => {
       document.title = previousTitle;
-      if (metaDescription && previousDescription !== null) {
-        metaDescription.setAttribute('content', previousDescription);
+      if (metaDescription) {
+        if (previousDescription !== null) {
+          metaDescription.setAttribute('content', previousDescription);
+        } else {
+          metaDescription.remove();
+        }
       }
       if (canonicalLink) {
         if (previousCanonical !== null) {
