@@ -36,10 +36,22 @@ function DetailCard({ label, value }) {
 export default function GreenPaprikaJVSEvent() {
   useEffect(() => {
     const previousTitle = document.title;
+    const metaDescription = document.querySelector('meta[name="description"]');
+    const previousDescription = metaDescription?.getAttribute('content') ?? null;
+
     document.title = 'Green Paprika | London Vegan Hungarian Pop-Up & Takeaway';
+    if (metaDescription) {
+      metaDescription.setAttribute(
+        'content',
+        'Green Paprika is a London vegan Hungarian pop-up and takeaway kitchen offering plant-based Hungarian food through supper events, popup collaborations, and takeaway across London.',
+      );
+    }
 
     return () => {
       document.title = previousTitle;
+      if (metaDescription && previousDescription !== null) {
+        metaDescription.setAttribute('content', previousDescription);
+      }
     };
   }, []);
 
