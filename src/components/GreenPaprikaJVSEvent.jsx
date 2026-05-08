@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import '../styles/GreenPaprika.css';
 
 const eventDetails = [
@@ -34,6 +34,15 @@ function DetailCard({ label, value }) {
 }
 
 export default function GreenPaprikaJVSEvent() {
+  useEffect(() => {
+    const previousTitle = document.title;
+    document.title = 'Green Paprika | London Vegan Hungarian Pop-Up & Takeaway';
+
+    return () => {
+      document.title = previousTitle;
+    };
+  }, []);
+
   return (
     <main className="gp-page">
       <div className="gp-shell">
