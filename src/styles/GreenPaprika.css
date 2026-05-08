@@ -363,6 +363,31 @@
 }
 
 @media (max-width: 520px) {
+  .gp-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gp-left-column {
+    display: contents;
+    width: 100%;
+  }
+
+  .gp-flyer-panel {
+    order: 1;
+  }
+
+  .gp-content-panel {
+    order: 2;
+  }
+
+  .gp-contact-panel {
+    order: 3;
+    width: 100%;
+    margin: 0;
+    align-self: stretch;
+  }
+
   .gp-center {
     font-size: 1.25rem;
   }
