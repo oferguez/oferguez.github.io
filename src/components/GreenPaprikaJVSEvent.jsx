@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import '../styles/GreenPaprika.css';
 
 const eventDetails = [
@@ -34,6 +34,49 @@ function DetailCard({ label, value }) {
 }
 
 export default function GreenPaprikaJVSEvent() {
+  useEffect(() => {
+    const previousTitle = document.title;
+    let metaDescription = document.querySelector('meta[name="description"]');
+    const previousDescription = metaDescription?.getAttribute('content') ?? null;
+    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    const previousCanonical = canonicalLink?.getAttribute('href') ?? null;
+
+    document.title = 'Green Paprika | London Vegan Hungarian Pop-Up & Takeaway';
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.setAttribute(
+      'content',
+      'Green Paprika is a London vegan Hungarian pop-up and takeaway kitchen offering plant-based Hungarian food through supper events, popup collaborations, and takeaway across London.',
+    );
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.setAttribute('href', 'https://green-paprika.com/');
+
+    return () => {
+      document.title = previousTitle;
+      if (metaDescription) {
+        if (previousDescription !== null) {
+          metaDescription.setAttribute('content', previousDescription);
+        } else {
+          metaDescription.remove();
+        }
+      }
+      if (canonicalLink) {
+        if (previousCanonical !== null) {
+          canonicalLink.setAttribute('href', previousCanonical);
+        } else {
+          canonicalLink.remove();
+        }
+      }
+    };
+  }, []);
+
   return (
     <main className="gp-page">
       <div className="gp-shell">
@@ -115,8 +158,12 @@ export default function GreenPaprikaJVSEvent() {
             <section className="gp-content-block">
               <p className="gp-section-label gp-center">About</p>
               <p className="gp-body-copy">
-                Green Paprika is a vegan pop-up and takeaway kitchen in London, bringing
-                traditional Hungarian dishes to life as generous, comforting plant-based food.
+                Green Paprika is a London vegan Hungarian pop-up and takeaway kitchen,
+                serving traditional Hungarian dishes as generous, comforting plant-based food.
+              </p>
+              <p className="gp-body-copy">
+                Through supper events, pop-up dinners, popup collaborations, and takeaway
+                food, Green Paprika serves plant-based Hungarian cooking across London.
               </p>
             </section>
 
