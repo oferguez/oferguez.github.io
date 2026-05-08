@@ -363,6 +363,59 @@
 }
 
 @media (max-width: 520px) {
+  .gp-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gp-left-column {
+    display: contents;
+    width: 100%;
+  }
+
+  .gp-flyer-panel {
+    order: 1;
+  }
+
+  .gp-content-panel {
+    order: 2;
+  }
+
+  .gp-contact-panel {
+    order: 3;
+    width: 100%;
+    margin: 0;
+    align-self: stretch;
+  }
+
+  .gp-center {
+    font-size: 1.25rem;
+  }
+
+  .gp-actions {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .gp-button-previous {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 0.82rem;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .gp-social-icon-button {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+  }
+
+  .gp-content-panel h1 {
+    /* font-size: clamp(1.6rem, 7vw, 2.1rem); */
+    font-size: 4vw;     
+   }
+
   .gp-shell {
     padding: 10px 0 16px;
   }

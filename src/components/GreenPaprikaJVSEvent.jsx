@@ -122,7 +122,7 @@ export default function GreenPaprikaJVSEvent() {
 
             <div className="gp-actions">
               <a
-                className="gp-button gp-button-secondary"
+                className="gp-button gp-button-secondary gp-button-previous"
                 href="/green-paprika/chapel-market-kitchen-popup.html"
               >
                 Previous Event
