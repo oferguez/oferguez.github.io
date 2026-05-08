@@ -115,8 +115,12 @@ export default function GreenPaprikaJVSEvent() {
             <section className="gp-content-block">
               <p className="gp-section-label gp-center">About</p>
               <p className="gp-body-copy">
-                Green Paprika is a vegan pop-up and takeaway kitchen in London, bringing
-                traditional Hungarian dishes to life as generous, comforting plant-based food.
+                Green Paprika is a London vegan Hungarian pop-up and takeaway kitchen,
+                serving traditional Hungarian dishes as generous, comforting plant-based food.
+              </p>
+              <p className="gp-body-copy">
+                Through supper events, pop-up dinners, popup collaborations, and takeaway
+                food, Green Paprika serves plant-based Hungarian cooking across London.
               </p>
             </section>
 
