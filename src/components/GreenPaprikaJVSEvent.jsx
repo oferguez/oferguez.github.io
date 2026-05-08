@@ -38,6 +38,8 @@ export default function GreenPaprikaJVSEvent() {
     const previousTitle = document.title;
     const metaDescription = document.querySelector('meta[name="description"]');
     const previousDescription = metaDescription?.getAttribute('content') ?? null;
+    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    const previousCanonical = canonicalLink?.getAttribute('href') ?? null;
 
     document.title = 'Green Paprika | London Vegan Hungarian Pop-Up & Takeaway';
     if (metaDescription) {
@@ -46,11 +48,24 @@ export default function GreenPaprikaJVSEvent() {
         'Green Paprika is a London vegan Hungarian pop-up and takeaway kitchen offering plant-based Hungarian food through supper events, popup collaborations, and takeaway across London.',
       );
     }
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.setAttribute('href', 'https://green-paprika.com/');
 
     return () => {
       document.title = previousTitle;
       if (metaDescription && previousDescription !== null) {
         metaDescription.setAttribute('content', previousDescription);
+      }
+      if (canonicalLink) {
+        if (previousCanonical !== null) {
+          canonicalLink.setAttribute('href', previousCanonical);
+        } else {
+          canonicalLink.remove();
+        }
       }
     };
   }, []);
