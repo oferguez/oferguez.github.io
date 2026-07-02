@@ -13,9 +13,34 @@
 		body {
 			font-family: "Times New Roman", "Georgia", "Noto Serif", serif;
 		}
+		.gp-event-nav {
+			max-width: 900px;
+			margin: 18px auto 0;
+			justify-content: center;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+		}
+		.gp-event-nav a {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 40px;
+			padding: 0 16px;
+			border: 1px solid rgba(126, 46, 36, 0.28);
+			border-radius: 999px;
+			background: #efdcc6;
+			color: #2f2417;
+			font-size: 0.92rem;
+			font-weight: 700;
+			text-decoration: none;
+		}
 		@media (max-width: 600px) {
 			body {
 				padding: 0 16px;
+			}
+			.gp-event-nav a {
+				width: 100%;
 			}
 			table.MsoTableGrid {
 				margin-left: 0 !important;
@@ -2799,7 +2824,6 @@ table.TableFirstRow
 <body lang=EN-GB link=blue vlink=purple style="background-color: #f7e9d5;">
 
 	<div style="margin: 40px auto; max-width: 900px;">
-
 		<div class=WordSection1>
 
 			<table class=MsoTableGrid border=0 cellspacing=0 cellpadding=0 width=0 style='border-collapse:collapse;border:
@@ -3097,6 +3121,11 @@ table.TableFirstRow
 				</span></p>
 
 		</div>
+
+		<nav class="gp-event-nav" aria-label="Event navigation">
+			<a href="guardian-recipes.html">My Published Guardian Recipes</a>
+			<a href="/">Next Event</a>
+		</nav>
 
 	</div>
 </body>
