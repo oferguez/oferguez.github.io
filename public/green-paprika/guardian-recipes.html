@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Green Paprika | Recipes Published in The Guardian</title>
+    <meta
+      name="description"
+      content="Green Paprika recipes published in The Guardian, including vegan and plant-based dishes with almonds, beans, tomatoes, walnuts, aubergine, squash, and miso."
+    />
+    <link rel="canonical" href="https://green-paprika.com/guardian-recipes.html" />
+    <link rel="icon" type="image/svg+xml" href="pepper.svg" />
+    <link rel="apple-touch-icon" href="pepper.svg" />
+    <style>
+      :root {
+        --gp-paper: #f7e9d5;
+        --gp-card: rgba(255, 252, 247, 0.92);
+        --gp-ink: #2f2417;
+        --gp-muted: #695844;
+        --gp-accent: #7e2e24;
+        --gp-accent-green: #075200;
+        --gp-accent-soft: #ead6c3;
+        --gp-line: rgba(47, 36, 23, 0.14);
+        --gp-shadow: 0 24px 48px rgba(66, 39, 19, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at top left, rgba(255, 255, 255, 0.42), transparent 28%),
+          linear-gradient(180deg, #f8eddc 0%, var(--gp-paper) 100%);
+        color: var(--gp-ink);
+        font-family: Georgia, "Times New Roman", serif;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .gp-shell {
+        width: min(1120px, calc(100% - 24px));
+        margin: 0 auto;
+        padding: 18px 0 24px;
+      }
+
+      .gp-layout {
+        display: grid;
+        grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .gp-panel {
+        border: 1px solid var(--gp-line);
+        border-radius: 20px;
+        background: var(--gp-card);
+        box-shadow: var(--gp-shadow);
+      }
+
+      .gp-intro-panel {
+        padding: 26px;
+        text-align: center;
+      }
+
+      .gp-content-panel {
+        padding: 22px 26px 20px;
+      }
+
+      .gp-pepper {
+        width: 96px;
+        height: 96px;
+        margin: 0 auto 16px;
+      }
+
+      .gp-section-label {
+        margin: 0 0 6px;
+        color: var(--gp-accent);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 10px;
+        color: var(--gp-accent-green);
+        font-size: 2rem;
+        line-height: 1.08;
+      }
+
+      h2 {
+        margin-bottom: 6px;
+        color: var(--gp-accent);
+        font-size: 1.05rem;
+      }
+
+      .gp-note,
+      .gp-body-copy {
+        color: var(--gp-muted);
+        font-size: 0.94rem;
+        line-height: 1.45;
+      }
+
+      .gp-note {
+        margin-bottom: 16px;
+      }
+
+      .gp-recipe-list {
+        display: grid;
+        gap: 12px;
+        margin: 0 0 18px;
+        padding: 0;
+        list-style: none;
+      }
+
+      .gp-recipe-card {
+        display: block;
+        padding: 16px 18px;
+        border: 1px solid var(--gp-line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.55);
+        text-decoration: none;
+        transition: border-color 0.2s ease, transform 0.2s ease;
+      }
+
+      .gp-recipe-card:hover,
+      .gp-recipe-card:focus-visible {
+        border-color: rgba(126, 46, 36, 0.42);
+        transform: translateY(-1px);
+      }
+
+      .gp-recipe-card strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--gp-accent);
+        font-size: 0.98rem;
+      }
+
+      .gp-recipe-card span {
+        display: block;
+        color: var(--gp-muted);
+        font-size: 0.9rem;
+        line-height: 1.42;
+      }
+
+      .gp-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-start;
+      }
+
+      .gp-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 16px;
+        border: 1px solid rgba(126, 46, 36, 0.28);
+        border-radius: 999px;
+        background: #efdcc6;
+        color: var(--gp-ink);
+        font-size: 0.92rem;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      @media (max-width: 860px) {
+        .gp-shell {
+          width: min(100% - 16px, 1100px);
+          padding: 14px 0 20px;
+        }
+
+        .gp-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .gp-intro-panel,
+        .gp-content-panel {
+          padding: 18px;
+        }
+
+        h1 {
+          font-size: clamp(1.6rem, 7vw, 2.1rem);
+        }
+      }
+
+      @media (max-width: 520px) {
+        .gp-button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="gp-shell">
+      <section class="gp-layout">
+        <aside class="gp-panel gp-intro-panel">
+          <img class="gp-pepper" src="pepper.svg" alt="" />
+          <p class="gp-section-label">Published Recipes</p>
+          <h1>Green Paprika in The Guardian</h1>
+          <p class="gp-body-copy">
+            A small archive of my recipes published in The Guardian's reader recipe
+            swap, collected here as part of the Green Paprika food story.
+          </p>
+        </aside>
+
+        <section class="gp-panel gp-content-panel">
+          <p class="gp-section-label">The Guardian</p>
+          <h2>Recipes</h2>
+          <p class="gp-note">
+            These links open the original Guardian articles in a new tab.
+          </p>
+
+          <ul class="gp-recipe-list">
+            <li>
+              <a
+                class="gp-recipe-card"
+                href="https://www.theguardian.com/lifeandstyle/2015/jul/18/readers-recipe-swap-ground-almonds-cake-pasta-curry"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <strong>Spaghetti aglio e olio in ground almonds and green peas</strong>
+                <span>Simple aglio e olio upgraded with nutty almonds and sweet green peas.</span>
+              </a>
+            </li>
+            <li>
+              <a
+                class="gp-recipe-card"
+                href="https://www.theguardian.com/lifeandstyle/2015/apr/04/baked-bean-recipe-swap"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <strong>Hummus with hot mushrooms and beans</strong>
+                <span>Creamy hummus topped with a warming mix of mushrooms and beans.</span>
+              </a>
+            </li>
+            <li>
+              <a
+                class="gp-recipe-card"
+                href="https://www.theguardian.com/lifeandstyle/2014/oct/11/tinned-canned-tomato-recipes-recipe-swap"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <strong>Spicy tomato soup with leeks and walnuts</strong>
+                <span>A bold tomato broth layered with leeks, toasted walnuts, and heat.</span>
+              </a>
+            </li>
+            <li>
+              <a
+                class="gp-recipe-card"
+                href="https://www.theguardian.com/lifeandstyle/2016/may/21/readers-recipe-swap-miso-dale-berning-sawa"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <strong>Aubergine and butternut squash in spicy miso</strong>
+                <span>Roasted vegetables glazed in a rich, spicy miso sauce.</span>
+              </a>
+            </li>
+          </ul>
+
+          <div class="gp-actions">
+            <a class="gp-button" href="chapel-market-kitchen-popup.html">Next</a>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
