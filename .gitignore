@@ -27,6 +27,7 @@ build/
 .Trashes
 ehthumbs.db
 Thumbs.db
+*:Zone.Identifier
 
 # Logs
 npm-debug.log*
