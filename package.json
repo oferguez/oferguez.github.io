@@ -9,6 +9,7 @@
     "deploy": "gh-pages -d dist",
     "dev": "vite",
     "build": "vite build",
+    "postbuild": "cp dist/green-paprika/guardian-recipes.html dist/guardian-recipes.html && cp dist/green-paprika/chapel-market-kitchen-popup.html dist/chapel-market-kitchen-popup.html && cp dist/green-paprika/pepper.svg dist/pepper.svg",
     "preview": "vite preview",
     "test": "node --test",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
