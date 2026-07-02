@@ -13,6 +13,9 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+
 jobs:
   diagnostics:
     if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/Publish')
@@ -33,7 +36,7 @@ jobs:
       - name: Setup
         uses: actions/setup-node@v4
         with: 
-          node-version: latest
+          node-version: 20
           cache: npm
       - run: npm ci
       - run: npm run build          # produces ./dist
@@ -56,6 +59,5 @@ jobs:
     steps:
       - uses: actions/deploy-pages@v4
         id: deployment
-
 
 
